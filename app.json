@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "SafeStop UFRN",
+    "slug": "safestop-ufrn",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "splash": {
+      "backgroundColor": "#081C24"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.ufrn.safestop"
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
+
