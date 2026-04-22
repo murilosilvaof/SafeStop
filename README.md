@@ -20,8 +20,10 @@ MVP de aplicativo multiplataforma em React Native com Expo para registrar alerta
 ## Como executar
 
 1. Instale as dependências com `npm install`.
-2. Inicie o projeto com `npm run start`.
-3. Abra no Expo Go, emulador Android, simulador iOS ou navegador.
+2. Inicie o menu do Expo com `npm run start`.
+3. Para abrir direto no navegador, use `npm run web`.
+4. Para celular, escaneie o QR code no Expo Go.
+5. Para emulador Android ou simulador iOS, use `npm run android` ou `npm run ios`.
 
 ## Próximos passos recomendados
 
