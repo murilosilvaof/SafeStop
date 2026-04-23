@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  ImageBackground,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -17,9 +18,11 @@ import { MetricCard } from "./src/components/MetricCard";
 import { NoticeItem } from "./src/components/NoticeItem";
 import { SectionCard } from "./src/components/SectionCard";
 import { StatusPill } from "./src/components/StatusPill";
-import { riskMeta } from "./src/data/mockData";
 import { colors, fonts } from "./src/constants/theme";
+import { riskMeta } from "./src/data/mockData";
 import { useSafeStopState } from "./src/hooks/useSafeStopState";
+
+const ectHeroImage = require("./assets/ect-campus-banner.png");
 
 export default function App() {
   const {
@@ -29,9 +32,7 @@ export default function App() {
     lastSentAlert,
     notices,
     selectedStop,
-    selectedStopId,
     sendChatMessage,
-    setSelectedStopId,
     stops,
     submitAlert,
   } = useSafeStopState();
@@ -41,7 +42,7 @@ export default function App() {
 
   const activeAlerts = alerts.filter((alert) => alert.status !== "resolvido");
   const totalWatchers = stops.reduce((sum, stop) => sum + stop.activeUsers, 0);
-  const communityReach = new Set(alerts.map((alert) => alert.stopId)).size;
+  const totalConfirmations = alerts.reduce((sum, alert) => sum + alert.confirmations, 0);
   const selectedRisk = riskMeta[selectedStop.riskLevel];
 
   const metrics = [
@@ -49,28 +50,48 @@ export default function App() {
       id: "active-alerts",
       label: "Alertas ativos",
       value: String(activeAlerts.length).padStart(2, "0"),
-      hint: "Ocorrências em acompanhamento agora",
+      hint: "Ocorrencias abertas na parada piloto",
       tone: "danger",
     },
     {
       id: "watchers",
-      label: "Usuários monitorando",
+      label: "Rede presente",
       value: String(totalWatchers),
-      hint: "App e totems acompanhando o entorno",
+      hint: "Pessoas acompanhando a ECT agora",
       tone: "info",
     },
     {
-      id: "reach",
-      label: "Paradas com cobertura",
-      value: String(communityReach),
-      hint: "Trechos sinalizados pela comunidade",
+      id: "confirmations",
+      label: "Confirmacoes",
+      value: String(totalConfirmations),
+      hint: "Sinais cruzados pela comunidade",
       tone: "success",
+    },
+  ];
+
+  const operationHighlights = [
+    {
+      id: "arrivals",
+      title: "Proximos circulares",
+      value: selectedStop.nextArrivals[0],
+      detail: `Depois: ${selectedStop.nextArrivals.slice(1).join(" / ")}`,
+    },
+    {
+      id: "patrol",
+      title: "Chegada da ronda",
+      value: selectedStop.patrolEta,
+      detail: selectedStop.patrolWindow,
+    },
+    {
+      id: "safe-wait",
+      title: "Espera recomendada",
+      value: "Abrigo central",
+      detail: selectedStop.recommendedWaitArea,
     },
   ];
 
   const handleSubmitAlert = (payload) => {
     submitAlert(payload);
-    setSelectedStopId(payload.stopId);
     setComposerVisible(false);
   };
 
@@ -88,87 +109,109 @@ export default function App() {
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
 
       <View style={styles.shell}>
-        <View style={styles.orbTop} />
-        <View style={styles.orbBottom} />
-
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <Text style={styles.eyebrow}>SAFE STOP UFRN</Text>
-            <Text style={styles.title}>Botão de alerta para proteger as paradas do circular</Text>
+            <Text style={styles.eyebrow}>SAFE STOP | CIRCULAR UFRN</Text>
+            <Text style={styles.title}>Protecao imediata na parada da ECT</Text>
             <Text style={styles.subtitle}>
-              O usuário sinaliza risco na parada, compartilha o motivo e dispara o aviso para
-              pessoas próximas e para a segurança patrimonial.
+              Parada da Escola de Ciencias e Tecnologia da UFRN monitorada em tempo real por usuarios, equipe de seguranca e sistema de resposta automatizado, para garantir que voce tenha a informacao e o apoio necessario para decidir esperar o circular com mais seguranca ou registrar uma ocorrencia em caso de risco.
             </Text>
           </View>
 
-          <View style={styles.heroCard}>
-            <View style={styles.heroTopRow}>
-              <View style={styles.heroTextBlock}>
-                <Text style={styles.heroLabel}>Parada monitorada agora</Text>
-                <Text style={styles.heroTitle}>{selectedStop.name}</Text>
-                <Text style={styles.heroMeta}>
-                  {selectedStop.zone} • {selectedStop.coordinates}
-                </Text>
+          <View style={styles.heroSection}>
+            <ImageBackground
+              imageStyle={styles.heroImageInner}
+              source={ectHeroImage}
+              style={styles.heroImage}
+            >
+              <View style={styles.heroOverlay} />
+
+              <View style={styles.heroTopRow}>
+                <View style={styles.heroTag}>
+                  <Text style={styles.heroTagText}>PARADA PILOTO</Text>
+                </View>
+                <View style={styles.heroTagDark}>
+                  <Text style={styles.heroTagDarkText}>{selectedStop.routeName}</Text>
+                </View>
               </View>
 
-              <StatusPill label={selectedRisk.label} tone={selectedRisk.tone} />
-            </View>
+              <View style={styles.heroContent}>
+                <View style={styles.heroTextBlock}>
+                  <Text style={styles.heroLabel}>{selectedStop.heroCaption}</Text>
+                  <Text style={styles.heroTitle}>{selectedStop.name}</Text>
+                  <Text style={styles.heroMeta}>
+                    {selectedStop.zone} | {selectedStop.routeDirection}
+                  </Text>
+                  <Text style={styles.heroDescription}>{selectedStop.description}</Text>
+                </View>
 
-            <Text style={styles.heroDescription}>{selectedStop.description}</Text>
-
-            <View style={styles.heroHighlights}>
-              <Text style={styles.heroHighlightText}>
-                {selectedStop.activeUsers} pessoas acompanhando essa parada no momento
-              </Text>
-              <Text style={styles.heroHighlightDot}>•</Text>
-              <Text style={styles.heroHighlightText}>Canal com segurança disponível em tempo real</Text>
-            </View>
-
-            <Pressable style={styles.alertButton} onPress={() => setComposerVisible(true)}>
-              <Text style={styles.alertButtonTitle}>Acionar alerta da parada</Text>
-              <Text style={styles.alertButtonText}>
-                Informe o motivo, classifique o risco e compartilhe o aviso com a comunidade.
-              </Text>
-            </Pressable>
-
-            {lastSentAlert ? (
-              <View style={styles.dispatchCard}>
-                <Text style={styles.dispatchLabel}>Último alerta enviado</Text>
-                <Text style={styles.dispatchTitle}>{lastSentAlert.stopName}</Text>
-                <Text style={styles.dispatchText}>{lastSentAlert.message}</Text>
-                <Text style={styles.dispatchMeta}>{lastSentAlert.createdAt}</Text>
+                <View style={styles.heroPillRow}>
+                  <StatusPill label={selectedRisk.label} tone={selectedRisk.tone} />
+                  <View style={styles.inlineSignal}>
+                    <View style={styles.inlineSignalDot} />
+                    <Text style={styles.inlineSignalText}>{selectedStop.safetyWindow}</Text>
+                  </View>
+                </View>
               </View>
-            ) : null}
+
+              <View style={styles.arrivalRow}>
+                {selectedStop.nextArrivals.map((time, index) => (
+                  <View key={time} style={styles.arrivalChip}>
+                    <Text style={styles.arrivalLabel}>{index === 0 ? "Chega em" : "Depois"}</Text>
+                    <Text style={styles.arrivalValue}>{time}</Text>
+                  </View>
+                ))}
+              </View>
+            </ImageBackground>
+
+            <View style={styles.commandDeck}>
+              <View style={styles.commandHeader}>
+                <View style={styles.commandBadge}>
+                  <Text style={styles.commandBadgeText}>SOS</Text>
+                </View>
+                <View style={styles.commandTextBlock}>
+                  <Text style={styles.commandEyebrow}>Acionamento principal</Text>
+                  <Text style={styles.commandTitle}>Botao de alerta da parada da ECT</Text>
+                  <Text style={styles.commandDescription}>
+                    Toque para registrar risco, compartilhar o motivo e disparar o aviso para
+                    usuarios proximos e para a seguranca patrimonial.
+                  </Text>
+                </View>
+              </View>
+
+              <Pressable style={styles.alertButton} onPress={() => setComposerVisible(true)}>
+                <View style={styles.alertButtonIcon}>
+                  <Text style={styles.alertButtonIconText}>!</Text>
+                </View>
+                <View style={styles.alertButtonCopy}>
+                  <Text style={styles.alertButtonTitle}>Acionar alerta agora</Text>
+                  <Text style={styles.alertButtonText}>
+                    Envio prioritario para a rede SafeStop, totem da parada e equipe de ronda.
+                  </Text>
+                </View>
+              </Pressable>
+
+              <View style={styles.commandMetaRow}>
+                <View style={styles.commandMetaCard}>
+                  <Text style={styles.commandMetaLabel}>Rede ativa</Text>
+                  <Text style={styles.commandMetaValue}>{selectedStop.activeUsers} pessoas online</Text>
+                </View>
+                <View style={styles.commandMetaCard}>
+                  <Text style={styles.commandMetaLabel}>Totem piloto</Text>
+                  <Text style={styles.commandMetaValue}>{selectedStop.totemStatus}</Text>
+                </View>
+              </View>
+
+              {lastSentAlert ? (
+                <View style={styles.dispatchCard}>
+                  <Text style={styles.dispatchLabel}>Ultimo alerta enviado</Text>
+                  <Text style={styles.dispatchTitle}>{lastSentAlert.stopName}</Text>
+                  <Text style={styles.dispatchText}>{lastSentAlert.message}</Text>
+                  <Text style={styles.dispatchMeta}>{lastSentAlert.createdAt}</Text>
+                </View>
+              ) : null}
+            </View>
           </View>
-
-          <SectionCard
-            eyebrow="Mapa rápido"
-            title="Paradas acompanhadas"
-            description="Troque a parada em foco para entender como o botão principal reage conforme o contexto."
-            tone="sea"
-          >
-            <View style={styles.stopGrid}>
-              {stops.map((stop) => {
-                const stopRisk = riskMeta[stop.riskLevel];
-                const isSelected = stop.id === selectedStopId;
-
-                return (
-                  <Pressable
-                    key={stop.id}
-                    onPress={() => setSelectedStopId(stop.id)}
-                    style={[styles.stopCard, isSelected && styles.stopCardSelected]}
-                  >
-                    <View style={styles.stopCardHeader}>
-                      <Text style={styles.stopCardTitle}>{stop.name}</Text>
-                      <StatusPill label={stopRisk.label} tone={stopRisk.tone} />
-                    </View>
-                    <Text style={styles.stopCardZone}>{stop.zone}</Text>
-                    <Text style={styles.stopCardText}>{stop.description}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </SectionCard>
 
           <View style={styles.metricsRow}>
             {metrics.map((metric) => (
@@ -183,9 +226,36 @@ export default function App() {
           </View>
 
           <SectionCard
-            eyebrow="Visão da comunidade"
-            title="Alertas recentes"
-            description="Cada aviso mostra o motivo informado pelo usuário, o estágio de atendimento e a confirmação de outras pessoas."
+            eyebrow="Operacao ECT"
+            title="Contexto rapido da parada"
+            description="Tudo o que o usuario precisa ver antes de decidir esperar o circular, mudar de posicao ou registrar uma ocorrencia."
+            tone="sea"
+          >
+            <View style={styles.operationGrid}>
+              {operationHighlights.map((item) => (
+                <View key={item.id} style={styles.operationCard}>
+                  <Text style={styles.operationLabel}>{item.title}</Text>
+                  <Text style={styles.operationValue}>{item.value}</Text>
+                  <Text style={styles.operationText}>{item.detail}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.routeBar}>
+              <View style={styles.routeIndicator} />
+              <View style={styles.routeCopy}>
+                <Text style={styles.routeTitle}>{selectedStop.routeName}</Text>
+                <Text style={styles.routeText}>
+                  {selectedStop.coordinates} | {selectedStop.routeDirection}
+                </Text>
+              </View>
+            </View>
+          </SectionCard>
+
+          <SectionCard
+            eyebrow="Visao da comunidade"
+            title="Alertas recentes da ECT"
+            description="Ocorrencias registradas para a parada piloto, com leitura rapida de gravidade, status de resposta e confirmacoes."
             tone="sun"
           >
             <View style={styles.alertList}>
@@ -197,8 +267,8 @@ export default function App() {
 
           <SectionCard
             eyebrow="Canal direto"
-            title="Central de apoio"
-            description="Chat simplificado entre o solicitante e a equipe de segurança para reduzir o tempo de resposta."
+            title="Central de apoio patrimonial"
+            description="Chat enxuto para manter o usuario orientado enquanto a equipe se desloca para a parada."
             tone="brick"
           >
             <View style={styles.chatList}>
@@ -210,7 +280,7 @@ export default function App() {
             <View style={styles.chatComposer}>
               <TextInput
                 onChangeText={setChatDraft}
-                placeholder="Compartilhe detalhes adicionais com a segurança"
+                placeholder="Compartilhe detalhes adicionais com a seguranca"
                 placeholderTextColor={colors.textMuted}
                 style={styles.chatInput}
                 value={chatDraft}
@@ -223,9 +293,9 @@ export default function App() {
           </SectionCard>
 
           <SectionCard
-            eyebrow="Prevenção"
-            title="Notificações preventivas"
-            description="Resumo de avisos que ajudam os usuários a decidir se aguardam o circular ou escolhem outra rota."
+            eyebrow="Prevencao"
+            title="Avisos operacionais"
+            description="Mensagens preventivas para quem usa o circular e precisa decidir onde esperar com mais seguranca."
             tone="mint"
           >
             <View style={styles.noticeList}>
@@ -237,7 +307,7 @@ export default function App() {
         </ScrollView>
 
         <AlertComposer
-          defaultStopId={selectedStopId}
+          defaultStopId={selectedStop.id}
           onClose={() => setComposerVisible(false)}
           onSubmit={handleSubmitAlert}
           stops={stops}
@@ -257,46 +327,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  orbTop: {
-    position: "absolute",
-    top: -120,
-    right: -80,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: colors.secondaryGlow,
-    opacity: 0.28,
-  },
-  orbBottom: {
-    position: "absolute",
-    bottom: -120,
-    left: -90,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: colors.primaryGlow,
-    opacity: 0.18,
-  },
   content: {
     paddingHorizontal: 20,
     paddingTop: 18,
-    paddingBottom: 32,
-    gap: 18,
+    paddingBottom: 36,
+    gap: 20,
   },
   header: {
-    gap: 10,
+    gap: 12,
   },
   eyebrow: {
-    color: colors.brand,
+    color: colors.brandSoft,
     fontFamily: fonts.body,
     fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 2.6,
   },
   title: {
     color: colors.text,
     fontFamily: fonts.display,
-    fontSize: 34,
+    fontSize: 35,
     lineHeight: 40,
     fontWeight: "800",
   },
@@ -306,50 +355,81 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 24,
   },
-  heroCard: {
-    backgroundColor: colors.surfaceStrong,
-    borderRadius: 28,
-    padding: 22,
-    borderWidth: 1,
-    borderColor: colors.outlineStrong,
+  heroSection: {
     gap: 16,
-    shadowColor: colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 16,
-    },
-    shadowOpacity: 0.22,
-    shadowRadius: 30,
-    elevation: 10,
+  },
+  heroImage: {
+    minHeight: 390,
+    borderRadius: 30,
+    overflow: "hidden",
+    justifyContent: "space-between",
+    padding: 20,
+  },
+  heroImageInner: {
+    borderRadius: 30,
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.overlay,
   },
   heroTopRow: {
     flexDirection: "row",
     gap: 12,
     justifyContent: "space-between",
+    zIndex: 1,
   },
-  heroTextBlock: {
-    flex: 1,
-    gap: 6,
+  heroTag: {
+    backgroundColor: colors.brand,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  heroLabel: {
-    color: colors.textMuted,
+  heroTagText: {
+    color: colors.background,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  heroTagDark: {
+    backgroundColor: "rgba(8, 16, 21, 0.72)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.16)",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  heroTagDarkText: {
+    color: colors.text,
     fontFamily: fonts.body,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
+  },
+  heroContent: {
+    zIndex: 1,
+    gap: 16,
+  },
+  heroTextBlock: {
+    gap: 8,
+  },
+  heroLabel: {
+    color: colors.brandSoft,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    fontWeight: "700",
     textTransform: "uppercase",
-    letterSpacing: 1.1,
   },
   heroTitle: {
     color: colors.text,
     fontFamily: fonts.display,
-    fontSize: 26,
-    lineHeight: 30,
+    fontSize: 31,
+    lineHeight: 34,
     fontWeight: "800",
   },
   heroMeta: {
     color: colors.textSoft,
     fontFamily: fonts.body,
     fontSize: 14,
+    fontWeight: "700",
   },
   heroDescription: {
     color: colors.textSoft,
@@ -357,34 +437,151 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 24,
   },
-  heroHighlights: {
+  heroPillRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 10,
     alignItems: "center",
   },
-  heroHighlightText: {
+  inlineSignal: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "rgba(8, 16, 21, 0.72)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+  },
+  inlineSignalDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: colors.success,
+  },
+  inlineSignalText: {
     color: colors.text,
     fontFamily: fonts.body,
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "700",
   },
-  heroHighlightDot: {
-    color: colors.brand,
-    fontSize: 18,
-    lineHeight: 18,
+  arrivalRow: {
+    zIndex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  arrivalChip: {
+    minWidth: 100,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: "rgba(8, 16, 21, 0.76)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.14)",
+    gap: 4,
+  },
+  arrivalLabel: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  arrivalValue: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  commandDeck: {
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: colors.outlineStrong,
+    padding: 20,
+    gap: 16,
+  },
+  commandHeader: {
+    flexDirection: "row",
+    gap: 14,
+    alignItems: "flex-start",
+  },
+  commandBadge: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: "rgba(240, 68, 68, 0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(240, 68, 68, 0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  commandBadgeText: {
+    color: colors.dangerSoft,
+    fontFamily: fonts.display,
+    fontSize: 17,
+    fontWeight: "800",
+  },
+  commandTextBlock: {
+    flex: 1,
+    gap: 6,
+  },
+  commandEyebrow: {
+    color: colors.dangerSoft,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  commandTitle: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 24,
+    lineHeight: 28,
+    fontWeight: "800",
+  },
+  commandDescription: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    lineHeight: 22,
   },
   alertButton: {
-    backgroundColor: colors.brand,
-    borderRadius: 22,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: colors.route,
+    borderRadius: 24,
     paddingHorizontal: 18,
     paddingVertical: 18,
-    gap: 6,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+  },
+  alertButtonIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: colors.routeDeep,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  alertButtonIconText: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 26,
+    lineHeight: 28,
+    fontWeight: "800",
+  },
+  alertButtonCopy: {
+    flex: 1,
+    gap: 4,
   },
   alertButtonTitle: {
     color: colors.text,
     fontFamily: fonts.display,
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "800",
   },
   alertButtonText: {
@@ -392,6 +589,31 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 14,
     lineHeight: 22,
+  },
+  commandMetaRow: {
+    gap: 10,
+  },
+  commandMetaCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    padding: 14,
+    gap: 6,
+  },
+  commandMetaLabel: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  commandMetaValue: {
+    color: colors.text,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: "700",
   },
   dispatchCard: {
     backgroundColor: colors.surface,
@@ -402,12 +624,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dispatchLabel: {
-    color: colors.info,
+    color: colors.brandSoft,
     fontFamily: fonts.body,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
-    letterSpacing: 1,
   },
   dispatchTitle: {
     color: colors.text,
@@ -426,48 +647,71 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 12,
   },
-  stopGrid: {
+  metricsRow: {
     gap: 12,
   },
-  stopCard: {
+  operationGrid: {
+    gap: 12,
+  },
+  operationCard: {
     backgroundColor: colors.surface,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.outline,
     padding: 16,
-    gap: 10,
+    gap: 6,
   },
-  stopCardSelected: {
-    borderColor: colors.brand,
-    backgroundColor: colors.surfaceLifted,
-  },
-  stopCardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-    alignItems: "flex-start",
-  },
-  stopCardTitle: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 18,
-    fontWeight: "800",
-    flex: 1,
-  },
-  stopCardZone: {
+  operationLabel: {
     color: colors.brandSoft,
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "700",
+    textTransform: "uppercase",
   },
-  stopCardText: {
+  operationValue: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 22,
+    lineHeight: 24,
+    fontWeight: "800",
+  },
+  operationText: {
     color: colors.textSoft,
     fontFamily: fonts.body,
     fontSize: 14,
     lineHeight: 22,
   },
-  metricsRow: {
-    gap: 12,
+  routeBar: {
+    flexDirection: "row",
+    gap: 14,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    padding: 16,
+    alignItems: "center",
+  },
+  routeIndicator: {
+    width: 12,
+    alignSelf: "stretch",
+    borderRadius: 999,
+    backgroundColor: colors.route,
+  },
+  routeCopy: {
+    flex: 1,
+    gap: 6,
+  },
+  routeTitle: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 19,
+    fontWeight: "800",
+  },
+  routeText: {
+    color: colors.textSoft,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    lineHeight: 22,
   },
   alertList: {
     gap: 12,
@@ -493,7 +737,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   chatButton: {
-    backgroundColor: colors.info,
+    backgroundColor: colors.brand,
     borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",

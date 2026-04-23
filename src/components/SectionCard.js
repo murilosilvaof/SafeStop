@@ -34,30 +34,28 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   header: {
-    gap: 8,
+    gap: 10,
   },
   eyebrow: {
     fontFamily: fonts.body,
     fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 1.6,
     textTransform: "uppercase",
   },
   title: {
     color: colors.text,
     fontFamily: fonts.display,
-    fontSize: 24,
-    lineHeight: 28,
+    fontSize: 25,
+    lineHeight: 29,
     fontWeight: "800",
   },
   description: {
     color: colors.textMuted,
     fontFamily: fonts.body,
     fontSize: 14,
-    lineHeight: 22,
+    lineHeight: 21,
   },
   body: {
     gap: 12,
   },
 });
-

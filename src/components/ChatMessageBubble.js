@@ -9,7 +9,7 @@ export function ChatMessageBubble({ message }) {
   return (
     <View style={[styles.row, isUser && styles.rowUser]}>
       <View style={[styles.bubble, isUser ? styles.userBubble : styles.guardBubble]}>
-        <Text style={styles.sender}>{isUser ? "Você" : "Segurança"}</Text>
+        <Text style={styles.sender}>{isUser ? "Voce" : "Seguranca"}</Text>
         <Text style={styles.content}>{message.content}</Text>
         <Text style={styles.time}>{message.createdAt}</Text>
       </View>
@@ -37,8 +37,8 @@ const styles = StyleSheet.create({
     borderColor: colors.outline,
   },
   userBubble: {
-    backgroundColor: "rgba(255, 122, 26, 0.18)",
-    borderColor: "rgba(255, 122, 26, 0.45)",
+    backgroundColor: "rgba(240, 68, 68, 0.14)",
+    borderColor: "rgba(240, 68, 68, 0.3)",
   },
   sender: {
     color: colors.brandSoft,
@@ -46,7 +46,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
-    letterSpacing: 0.8,
   },
   content: {
     color: colors.text,
@@ -60,4 +59,3 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
 });
-

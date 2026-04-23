@@ -23,6 +23,7 @@ export function AlertComposer({ defaultStopId, onClose, onSubmit, stops, visible
   const [riskLevel, setRiskLevel] = useState("alerta");
   const [message, setMessage] = useState("");
   const [anonymous, setAnonymous] = useState(false);
+  const selectedStop = stops.find((stop) => stop.id === stopId) ?? stops[0];
 
   useEffect(() => {
     if (!visible) {
@@ -59,36 +60,33 @@ export function AlertComposer({ defaultStopId, onClose, onSubmit, stops, visible
         <View style={styles.sheet}>
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
-              <Text style={styles.eyebrow}>Novo alerta</Text>
-              <Text style={styles.title}>Descreva o motivo do aviso</Text>
+              <Text style={styles.eyebrow}>Alerta da parada piloto</Text>
+              <Text style={styles.title}>Registrar ocorrencia na ECT</Text>
               <Text style={styles.description}>
-                Esse formulário simula o envio do alerta da parada para usuários próximos e para a
-                segurança patrimonial.
+                O aviso vai para usuarios proximos e para a seguranca patrimonial com prioridade na
+                parada da ECT.
               </Text>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Escolha a parada</Text>
-              <View style={styles.optionList}>
-                {stops.map((stop) => {
-                  const selected = stop.id === stopId;
-
-                  return (
-                    <Pressable
-                      key={stop.id}
-                      onPress={() => setStopId(stop.id)}
-                      style={[styles.optionCard, selected && styles.optionCardSelected]}
-                    >
-                      <Text style={styles.optionTitle}>{stop.name}</Text>
-                      <Text style={styles.optionText}>{stop.zone}</Text>
-                    </Pressable>
-                  );
-                })}
+              <Text style={styles.sectionTitle}>Parada monitorada</Text>
+              <View style={styles.focusCard}>
+                <View style={styles.focusHeader}>
+                  <View style={styles.focusIcon}>
+                    <Text style={styles.focusIconText}>ECT</Text>
+                  </View>
+                  <View style={styles.focusTextBlock}>
+                    <Text style={styles.optionTitle}>{selectedStop.name}</Text>
+                    <Text style={styles.optionText}>{selectedStop.zone}</Text>
+                  </View>
+                  <StatusPill label="Piloto" tone="accent" />
+                </View>
+                <Text style={styles.focusDescription}>{selectedStop.recommendedWaitArea}</Text>
               </View>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Nível do alerta</Text>
+              <Text style={styles.sectionTitle}>Nivel do alerta</Text>
               <View style={styles.severityList}>
                 {severityOptions.map((option) => {
                   const selected = option === riskLevel;
@@ -103,11 +101,11 @@ export function AlertComposer({ defaultStopId, onClose, onSubmit, stops, visible
                       <StatusPill label={optionMeta.label} tone={optionMeta.tone} />
                       <Text style={styles.severityText}>
                         {option === "monitorando" &&
-                          "Percebeu um comportamento estranho, mas sem ameaça imediata."}
+                          "Percebeu algo incomum na parada, mas sem ameaca imediata."}
                         {option === "alerta" &&
-                          "A parada parece insegura e a comunidade deve ser avisada."}
+                          "A parada parece insegura e a comunidade deve ser avisada agora."}
                         {option === "emergencia" &&
-                          "Há indícios de risco alto e a equipe precisa agir rápido."}
+                          "Ha indicios de risco alto e a equipe precisa agir com prioridade."}
                       </Text>
                     </Pressable>
                   );
@@ -120,7 +118,7 @@ export function AlertComposer({ defaultStopId, onClose, onSubmit, stops, visible
               <TextInput
                 multiline
                 onChangeText={setMessage}
-                placeholder="Exemplo: pouca iluminação, abordagem suspeita, grupo intimidando quem espera o ônibus..."
+                placeholder="Exemplo: iluminacao baixa, abordagem suspeita, grupo intimidando quem espera o circular..."
                 placeholderTextColor={colors.textMuted}
                 style={styles.messageInput}
                 textAlignVertical="top"
@@ -130,18 +128,18 @@ export function AlertComposer({ defaultStopId, onClose, onSubmit, stops, visible
 
             <View style={styles.toggleRow}>
               <View style={styles.toggleTextBlock}>
-                <Text style={styles.sectionTitle}>Enviar como anônimo</Text>
+                <Text style={styles.sectionTitle}>Enviar como anonimo</Text>
                 <Text style={styles.toggleDescription}>
-                  O feed público exibirá o alerta sem identificar quem acionou o botão.
+                  O feed publico mostra a ocorrencia sem identificar quem acionou o botao.
                 </Text>
               </View>
 
               <Switch
                 onValueChange={setAnonymous}
-                thumbColor={anonymous ? colors.brand : "#F1F5F9"}
+                thumbColor={anonymous ? colors.danger : "#F1F5F9"}
                 trackColor={{
                   false: colors.outlineStrong,
-                  true: "rgba(255, 122, 26, 0.35)",
+                  true: "rgba(240, 68, 68, 0.35)",
                 }}
                 value={anonymous}
               />
@@ -156,7 +154,7 @@ export function AlertComposer({ defaultStopId, onClose, onSubmit, stops, visible
                 onPress={handleSubmit}
                 style={[styles.primaryButton, !message.trim() && styles.primaryButtonDisabled]}
               >
-                <Text style={styles.primaryButtonText}>Enviar alerta</Text>
+                <Text style={styles.primaryButtonText}>Disparar alerta</Text>
               </Pressable>
             </View>
           </ScrollView>
@@ -193,11 +191,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   eyebrow: {
-    color: colors.brand,
+    color: colors.dangerSoft,
     fontFamily: fonts.body,
     fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 1.8,
     textTransform: "uppercase",
   },
   title: {
@@ -222,20 +219,44 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
   },
-  optionList: {
-    gap: 10,
-  },
-  optionCard: {
+  focusCard: {
     backgroundColor: colors.surface,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.outline,
-    padding: 14,
+    borderColor: colors.outlineStrong,
+    padding: 16,
+    gap: 12,
+  },
+  focusHeader: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+  },
+  focusIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: "rgba(240, 68, 68, 0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(240, 68, 68, 0.28)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  focusIconText: {
+    color: colors.dangerSoft,
+    fontFamily: fonts.display,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  focusTextBlock: {
+    flex: 1,
     gap: 4,
   },
-  optionCardSelected: {
-    borderColor: colors.brand,
-    backgroundColor: colors.surfaceLifted,
+  focusDescription: {
+    color: colors.textSoft,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    lineHeight: 22,
   },
   optionTitle: {
     color: colors.text,
@@ -260,7 +281,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   severityCardSelected: {
-    borderColor: colors.brand,
+    borderColor: colors.danger,
     backgroundColor: colors.surfaceLifted,
   },
   severityText: {
@@ -328,7 +349,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingVertical: 15,
     alignItems: "center",
-    backgroundColor: colors.brand,
+    backgroundColor: colors.danger,
   },
   primaryButtonDisabled: {
     opacity: 0.48,
@@ -340,4 +361,3 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 });
-

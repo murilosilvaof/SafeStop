@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.outlineStrong,
     padding: 18,
-    gap: 8,
+    gap: 10,
   },
   label: {
     color: colors.textMuted,
@@ -34,19 +34,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     textTransform: "uppercase",
-    letterSpacing: 1.1,
   },
   value: {
     fontFamily: fonts.display,
-    fontSize: 34,
-    lineHeight: 36,
+    fontSize: 36,
+    lineHeight: 38,
     fontWeight: "800",
   },
   hint: {
     color: colors.textSoft,
     fontFamily: fonts.body,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 22,
   },
 });
-

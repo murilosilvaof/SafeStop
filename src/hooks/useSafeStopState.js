@@ -1,6 +1,11 @@
 import { useState } from "react";
 
-import { initialAlerts, initialChatMessages, initialNotices, stops as stopSeed } from "../data/mockData";
+import {
+  initialAlerts,
+  initialChatMessages,
+  initialNotices,
+  stops as stopSeed,
+} from "../data/mockData";
 
 const formatter = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
@@ -15,7 +20,7 @@ const chatFormatter = new Intl.DateTimeFormat("pt-BR", {
 });
 
 function formatAlertTimestamp(date) {
-  return formatter.format(date).replace(",", " •");
+  return formatter.format(date).replace(",", " |");
 }
 
 function formatChatTimestamp(date) {
@@ -45,7 +50,7 @@ export function useSafeStopState() {
       id: createId("alert"),
       stopId: targetStop.id,
       stopName: targetStop.name,
-      author: anonymous ? "Usuário anônimo" : "Você",
+      author: anonymous ? "Usuario anonimo" : "Voce",
       anonymous,
       message,
       createdAt: formatAlertTimestamp(createdAt),
@@ -74,7 +79,7 @@ export function useSafeStopState() {
       {
         id: createId("chat"),
         sender: "seguranca",
-        content: `Alerta recebido para ${targetStop.name}. Equipe patrimonial acionada e usuários próximos foram avisados.`,
+        content: `Alerta recebido para ${targetStop.name}. Equipe patrimonial acionada e usuarios proximos avisados.`,
         createdAt: formatChatTimestamp(createdAt),
       },
     ]);
@@ -119,7 +124,7 @@ export function useSafeStopState() {
       {
         id: createId("chat"),
         sender: "seguranca",
-        content: "Mensagem recebida. Continue em local iluminado enquanto a ronda se aproxima.",
+        content: "Mensagem recebida. Continue no abrigo iluminado enquanto a ronda se aproxima.",
         createdAt: humanTime,
       },
     ]);
@@ -139,4 +144,3 @@ export function useSafeStopState() {
     submitAlert,
   };
 }
-

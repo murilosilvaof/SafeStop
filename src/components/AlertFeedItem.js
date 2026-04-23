@@ -11,11 +11,13 @@ export function AlertFeedItem({ alert, onConfirm }) {
 
   return (
     <View style={styles.card}>
+      <View style={styles.accentBar} />
+
       <View style={styles.topRow}>
         <View style={styles.textBlock}>
           <Text style={styles.title}>{alert.stopName}</Text>
           <Text style={styles.meta}>
-            {alert.author} • {alert.createdAt}
+            {alert.author} | {alert.createdAt}
           </Text>
         </View>
 
@@ -29,7 +31,7 @@ export function AlertFeedItem({ alert, onConfirm }) {
 
       <View style={styles.footer}>
         <Text style={styles.confirmationText}>
-          {alert.confirmations} confirmações de usuários próximos
+          {alert.confirmations} confirmacoes da comunidade nessa parada
         </Text>
 
         <Pressable onPress={() => onConfirm(alert.id)} style={styles.confirmButton}>
@@ -48,6 +50,15 @@ const styles = StyleSheet.create({
     borderColor: colors.outline,
     padding: 16,
     gap: 14,
+    overflow: "hidden",
+  },
+  accentBar: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: 4,
+    backgroundColor: colors.route,
   },
   topRow: {
     gap: 12,
@@ -92,18 +103,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   confirmButton: {
-    backgroundColor: colors.surfaceLifted,
+    backgroundColor: "rgba(240, 68, 68, 0.12)",
     borderWidth: 1,
-    borderColor: colors.outlineStrong,
+    borderColor: "rgba(240, 68, 68, 0.28)",
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   confirmButtonText: {
-    color: colors.text,
+    color: colors.dangerSoft,
     fontFamily: fonts.body,
     fontSize: 13,
     fontWeight: "800",
   },
 });
-
