@@ -23,7 +23,9 @@ export function AlertComposer({ defaultStopId, onClose, onSubmit, stops, visible
   const [riskLevel, setRiskLevel] = useState("alerta");
   const [message, setMessage] = useState("");
   const [anonymous, setAnonymous] = useState(false);
-  const selectedStop = stops.find((stop) => stop.id === stopId) ?? stops[0];
+  const selectedStop = (stops && stops.find((stop) => stop.id === stopId)) ?? (stops ? stops[0] : null);
+
+if (!selectedStop) return null;
 
   useEffect(() => {
     if (!visible) {
