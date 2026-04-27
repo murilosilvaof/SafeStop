@@ -5,28 +5,28 @@ import { colors, fonts } from "../constants/theme";
 
 const toneStyles = {
   accent: {
-    backgroundColor: "rgba(243, 197, 72, 0.16)",
-    borderColor: "rgba(243, 197, 72, 0.36)",
-    color: colors.brandSoft,
+    backgroundColor: "rgba(197, 0, 0, 0.08)",
+    borderColor: "rgba(197, 0, 0, 0.18)",
+    color: colors.brand,
   },
   warning: {
-    backgroundColor: "rgba(255, 182, 72, 0.14)",
-    borderColor: "rgba(255, 182, 72, 0.35)",
+    backgroundColor: "rgba(198, 122, 0, 0.1)",
+    borderColor: "rgba(198, 122, 0, 0.22)",
     color: colors.warning,
   },
   success: {
-    backgroundColor: "rgba(76, 211, 126, 0.16)",
-    borderColor: "rgba(76, 211, 126, 0.4)",
+    backgroundColor: "rgba(28, 140, 91, 0.1)",
+    borderColor: "rgba(28, 140, 91, 0.2)",
     color: colors.success,
   },
   info: {
-    backgroundColor: "rgba(75, 182, 255, 0.16)",
-    borderColor: "rgba(75, 182, 255, 0.4)",
+    backgroundColor: "rgba(15, 121, 226, 0.1)",
+    borderColor: "rgba(15, 121, 226, 0.22)",
     color: colors.info,
   },
   danger: {
-    backgroundColor: "rgba(240, 68, 68, 0.18)",
-    borderColor: "rgba(240, 68, 68, 0.42)",
+    backgroundColor: "rgba(214, 0, 0, 0.1)",
+    borderColor: "rgba(214, 0, 0, 0.24)",
     color: colors.danger,
   },
 };
