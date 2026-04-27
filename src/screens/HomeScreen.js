@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ImageBackground,
   KeyboardAvoidingView,
@@ -9,6 +9,7 @@ import {
   Text,
   TextInput,
   View,
+  Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -44,6 +45,52 @@ export function HomeScreen({ navigation, state }) {
   } = state;
   const [chatDraft, setChatDraft] = useState("");
   const [isComposerVisible, setComposerVisible] = useState(false);
+
+  // Animação de pulsação do botão de alerta
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Animação de pulsação contínua
+    const pulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.08,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    // Animação de brilho pulsante
+    const glowAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    pulseAnimation.start();
+    glowAnimation.start();
+
+    return () => {
+      pulseAnimation.stop();
+      glowAnimation.stop();
+    };
+  }, [pulseAnim, glowAnim]);
 
   const ectStop = stops.find((stop) => stop.id === "ect") ?? stops[0];
 
@@ -110,19 +157,39 @@ export function HomeScreen({ navigation, state }) {
         </View>
 
         <View style={styles.alertCard}>
+          <Animated.View
+            style={[
+              styles.alertGlowRing,
+              {
+                transform: [{ scale: pulseAnim }],
+                opacity: glowAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.3, 0.8],
+                }),
+              },
+            ]}
+          />
           <View style={styles.alertRingOuter}>
             <View style={styles.alertRingMiddle}>
-              <Pressable onPress={() => setComposerVisible(true)} style={styles.alertButton}>
-                <Ionicons color="#FFFFFF" name="warning" size={42} />
-                <Text style={styles.alertButtonText}>ALERTA</Text>
-              </Pressable>
+              <Animated.View
+                style={{
+                  transform: [{ scale: pulseAnim }],
+                }}
+              >
+                <Pressable
+                  onPress={() => setComposerVisible(true)}
+                  style={styles.alertButton}
+                >
+                  <Ionicons color="#FFFFFF" name="warning" size={48} />
+                  <Text style={styles.alertButtonText}>ALERTA</Text>
+                </Pressable>
+              </Animated.View>
             </View>
           </View>
 
-          <Text style={styles.alertTitle}>Fale agora conosco!</Text>
+          <Text style={styles.alertTitle}>Toque para pedir ajuda!</Text>
           <Text style={styles.alertDescription}>
-            Toque no botao para registrar o risco, avisar a comunidade e iniciar o atendimento da
-            seguranca.
+            Toque no botao vermelho para registrar o risco, avisar a comunidade e acionar a seguranca.
           </Text>
         </View>
 
@@ -323,45 +390,56 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 8,
   },
+  alertGlowRing: {
+    position: "absolute",
+    top: -20,
+    width: 280,
+    height: 280,
+    borderRadius: 999,
+    backgroundColor: colors.route,
+  },
   alertRingOuter: {
-    width: 250,
-    height: 250,
+    width: 280,
+    height: 280,
     borderRadius: 999,
     backgroundColor: "#FFFFFF",
-    borderWidth: 2,
-    borderColor: "#EFE6DE",
+    borderWidth: 3,
+    borderColor: "#FFE5E5",
     alignItems: "center",
     justifyContent: "center",
   },
   alertRingMiddle: {
-    width: 176,
-    height: 176,
+    width: 200,
+    height: 200,
     borderRadius: 999,
-    borderWidth: 2,
-    borderColor: "#1B1B1B",
+    borderWidth: 3,
+    borderColor: "#FFCDCD",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FFF5F5",
   },
   alertButton: {
-    width: 132,
-    height: 132,
+    width: 160,
+    height: 160,
     borderRadius: 999,
-    backgroundColor: "#111111",
+    backgroundColor: colors.route,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    elevation: 6,
+    shadowColor: colors.route,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 10,
+    borderWidth: 4,
+    borderColor: "#FF9999",
   },
   alertButtonText: {
     color: "#FFFFFF",
     fontFamily: fonts.display,
-    fontSize: 24,
-    fontWeight: "800",
+    fontSize: 28,
+    fontWeight: "900",
+    letterSpacing: 2,
   },
   alertTitle: {
     color: colors.text,
