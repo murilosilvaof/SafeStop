@@ -10,7 +10,9 @@ import { HomeScreen } from "./src/screens/HomeScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { SchedulesScreen } from "./src/screens/SchedulesScreen";
 
-const Tab = createBottomTabNavigator();
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+
+const Tab = createMaterialTopTabNavigator();
 
 export default function App() {
   const state = useSafeStopState();
@@ -21,43 +23,32 @@ export default function App() {
 
       <Tab.Navigator
         screenOptions={({ route }) => ({
-          headerShown: false,
-          sceneStyle: {
-            backgroundColor: colors.background,
-          },
-          tabBarHideOnKeyboard: true,
-          tabBarActiveTintColor: "#FFFFFF",
-          tabBarInactiveTintColor: "#FFD2D2",
-          tabBarIcon: ({ color, size }) => {
-            const icons = {
-              Principal: "warning-outline",
-              Horarios: "bus-outline",
-              Perfil: "person-outline",
-            };
-
-            return <Ionicons color={color} name={icons[route.name] ?? "ellipse"} size={size} />;
-          },
-          tabBarLabelStyle: {
-            fontSize: 12,
-            fontWeight: "700",
-            marginBottom: 4,
+          tabBarShowIcon: true,
+          tabBarActiveTintColor: '#FFF',
+          tabBarInactiveTintColor: '#F7B95E',
+          tabBarIndicatorStyle: {
+            backgroundColor: colors.brand,
+            height: 5,
+            borderRadius: 3,
           },
           tabBarStyle: {
-            position: "absolute",
-            left: 16,
-            right: 16,
-            bottom: 16,
-            height: 72,
-            paddingTop: 8,
-            paddingBottom: 8,
-            borderTopWidth: 0,
-            borderRadius: 28,
-            backgroundColor: colors.route,
-            shadowColor: colors.shadow,
-            shadowOffset: { width: 0, height: 12 },
-            shadowOpacity: 0.18,
-            shadowRadius: 18,
-            elevation: 12,
+            backgroundColor: colors.brand,
+            borderBottomWidth: 0,
+            elevation: 6,
+            shadowColor: colors.brandDeep,
+          },
+          tabBarLabelStyle: {
+            fontWeight: 'bold',
+            fontSize: 14,
+            textTransform: 'uppercase',
+          },
+          tabBarIcon: ({ color, size }) => {
+            const icons = {
+              Principal: 'warning-outline',
+              Horarios: 'bus-outline',
+              Perfil: 'person-outline',
+            };
+            return <Ionicons color={color} name={icons[route.name] ?? 'ellipse'} size={size} />;
           },
         })}
       >

@@ -1,28 +1,28 @@
 import { Platform } from "react-native";
 
 export const colors = {
-  background: "#F7F1EB",
-  surfaceStrong: "#FFFFFF",
-  surfaceLifted: "#FFF6F1",
+  background: "#FFFFFF", // fundo branco
+  surfaceStrong: "#F7F7F7", // cinza muito claro
+  surfaceLifted: "#F2F6FA", // azul claro sutil
   surface: "#FFFFFF",
-  surfaceMuted: "#F2E7DE",
-  outlineStrong: "#E7D8CD",
-  outline: "#EFE2D8",
-  text: "#141414",
-  textSoft: "#343434",
-  textMuted: "#6C655F",
-  brand: "#C50000",
-  brandSoft: "#9B1C1C",
-  brandDeep: "#7A0000",
-  info: "#0F79E2",
+  surfaceMuted: "#EAF0F6",
+  outlineStrong: "#D1D9E6",
+  outline: "#B0B8C1",
+  text: "#1A2233", // azul escuro
+  textSoft: "#3A4A66",
+  textMuted: "#7A869A",
+  brand: "#F3921B", // laranja principal
+  brandSoft: "#F7B95E",
+  brandDeep: "#C76B00",
+  info: "#1B4F72", // azul escuro
   success: "#1C8C5B",
-  warning: "#C67A00",
-  danger: "#D60000",
-  dangerSoft: "#B00000",
-  route: "#C50000",
-  routeDeep: "#8E0000",
-  overlay: "rgba(197, 0, 0, 0.12)",
-  shadow: "#2A1616",
+  warning: "#F7B731",
+  danger: "#E74C3C",
+  dangerSoft: "#C0392B",
+  route: "#1B4F72", // azul escuro para botões e destaques
+  routeDeep: "#13304A",
+  overlay: "rgba(27, 79, 114, 0.10)",
+  shadow: "#1B4F72",
 };
 
 export const fonts = {

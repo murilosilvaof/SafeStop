@@ -158,34 +158,18 @@ export function HomeScreen({ navigation, state }) {
 
         <View style={styles.alertCard}>
           <Animated.View
-            style={[
-              styles.alertGlowRing,
-              {
-                transform: [{ scale: pulseAnim }],
-                opacity: glowAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.3, 0.8],
-                }),
-              },
-            ]}
-          />
-          <View style={styles.alertRingOuter}>
-            <View style={styles.alertRingMiddle}>
-              <Animated.View
-                style={{
-                  transform: [{ scale: pulseAnim }],
-                }}
-              >
-                <Pressable
-                  onPress={() => setComposerVisible(true)}
-                  style={styles.alertButton}
-                >
-                  <Ionicons color="#FFFFFF" name="warning" size={48} />
-                  <Text style={styles.alertButtonText}>ALERTA</Text>
-                </Pressable>
-              </Animated.View>
-            </View>
-          </View>
+            style={{
+              transform: [{ scale: pulseAnim }],
+            }}
+          >
+            <Pressable
+              onPress={() => setComposerVisible(true)}
+              style={styles.alertButton}
+            >
+              <Ionicons color="#FFFFFF" name="warning" size={48} />
+              <Text style={styles.alertButtonText}>ALERTA</Text>
+            </Pressable>
+          </Animated.View>
 
           <Text style={styles.alertTitle}>Toque para pedir ajuda!</Text>
           <Text style={styles.alertDescription}>
@@ -390,43 +374,19 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 8,
   },
-  alertGlowRing: {
-    position: "absolute",
-    top: -10,
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    backgroundColor: colors.route,
-  },
-  alertRingOuter: {
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  alertRingMiddle: {
-    width: 200,
-    height: 200,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   alertButton: {
     width: 160,
     height: 160,
     borderRadius: 999,
-    backgroundColor: colors.route,
+    backgroundColor: '#E74C3C', // vermelho forte
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    shadowColor: colors.route,
+    shadowColor: '#E74C3C',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
     elevation: 10,
-    borderWidth: 4,
-    borderColor: "#FF9999",
   },
   alertButtonText: {
     color: "#FFFFFF",
@@ -474,10 +434,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFF0F0",
+    backgroundColor: colors.brandSoft,
   },
   quickActionTitle: {
-    color: colors.route,
+    color: colors.brand,
     fontFamily: fonts.display,
     fontSize: 22,
     fontWeight: "800",
@@ -597,10 +557,10 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: colors.surfaceStrong,
+    backgroundColor: colors.brand,
   },
   stopLinkButtonText: {
-    color: colors.text,
+    color: "#FFF",
     fontFamily: fonts.body,
     fontSize: 13,
     fontWeight: "800",
@@ -648,12 +608,17 @@ const styles = StyleSheet.create({
   },
   chatCard: {
     marginHorizontal: 20,
-    backgroundColor: colors.surfaceStrong,
+    backgroundColor: colors.route,
     borderRadius: 28,
     padding: 20,
     gap: 16,
     borderWidth: 1,
-    borderColor: colors.outlineStrong,
+    borderColor: colors.routeDeep,
+    shadowColor: colors.routeDeep,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
+    elevation: 4,
   },
   chatHeader: {
     flexDirection: "row",
@@ -662,14 +627,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionEyebrow: {
-    color: colors.route,
+    color: '#F7B95E', // laranja claro
     fontFamily: fonts.body,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
   },
   sectionTitle: {
-    color: colors.text,
+    color: '#FFF',
     fontFamily: fonts.display,
     fontSize: 28,
     fontWeight: "800",
@@ -681,10 +646,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "#FFF0F0",
+    backgroundColor: colors.brand,
   },
   chatBadgeText: {
-    color: colors.route,
+    color: '#FFF',
     fontFamily: fonts.body,
     fontSize: 12,
     fontWeight: "700",
@@ -703,11 +668,11 @@ const styles = StyleSheet.create({
     maxHeight: 120,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.outlineStrong,
+    borderColor: colors.routeDeep,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: colors.surfaceLifted,
-    color: colors.text,
+    backgroundColor: '#FFF',
+    color: colors.route,
     fontFamily: fonts.body,
     fontSize: 14,
     lineHeight: 20,
@@ -717,7 +682,7 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 18,
-    backgroundColor: colors.route,
+    backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
   },
