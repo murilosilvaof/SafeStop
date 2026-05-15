@@ -9,7 +9,7 @@ export function ChatMessageBubble({ message }) {
   return (
     <View style={[styles.row, isUser && styles.rowUser]}>
       <View style={[styles.bubble, isUser ? styles.userBubble : styles.guardBubble]}>
-        <Text style={styles.sender}>{isUser ? "Voce" : "Seguranca"}</Text>
+        <Text style={styles.sender}>{isUser ? "Você" : "Segurança"}</Text>
         <Text style={styles.content}>{message.content}</Text>
         <Text style={styles.time}>{message.createdAt}</Text>
       </View>
@@ -20,28 +20,34 @@ export function ChatMessageBubble({ message }) {
 const styles = StyleSheet.create({
   row: {
     alignItems: "flex-start",
+    width: "100%",
   },
   rowUser: {
     alignItems: "flex-end",
   },
   bubble: {
-    width: "88%",
+    maxWidth: "84%",
     borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 8,
     borderWidth: 1,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 2,
   },
   guardBubble: {
     backgroundColor: colors.surface,
-    borderColor: colors.outline,
+    borderColor: colors.outlineStrong,
   },
   userBubble: {
-    backgroundColor: "rgba(240, 68, 68, 0.14)",
-    borderColor: "rgba(240, 68, 68, 0.3)",
+    backgroundColor: colors.brandSoft,
+    borderColor: colors.brand,
   },
   sender: {
-    color: colors.brandSoft,
+    color: colors.brandDeep,
     fontFamily: fonts.body,
     fontSize: 12,
     fontWeight: "700",

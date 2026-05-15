@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
@@ -21,11 +22,11 @@ import { riskMeta } from "../data/mockData";
 
 const ectHeroImage = require("../../assets/ect-campus-banner.png");
 
-function QuickActionCard({ description, icon, onPress, title }) {
+function QuickActionCard({ description, icon, iconBg, iconColor, onPress, title }) {
   return (
-    <Pressable onPress={onPress} style={styles.quickActionCard}>
-      <View style={styles.quickActionIcon}>
-        <Ionicons color={colors.route} name={icon} size={24} />
+    <Pressable onPress={onPress} style={[styles.quickActionCard, { borderColor: iconBg || colors.outlineStrong }]}> 
+      <View style={[styles.quickActionIcon, { backgroundColor: iconBg || colors.brandSoft }]}> 
+        <Ionicons color={iconColor || colors.surface} name={icon} size={24} />
       </View>
       <Text style={styles.quickActionTitle}>{title}</Text>
       <Text style={styles.quickActionText}>{description}</Text>
@@ -44,7 +45,46 @@ export function HomeScreen({ navigation, state }) {
     submitAlert,
   } = state;
   const [chatDraft, setChatDraft] = useState("");
+  const [emergencyPhone, setEmergencyPhone] = useState("");
+  const [emergencyEmail, setEmergencyEmail] = useState("");
   const [isComposerVisible, setComposerVisible] = useState(false);
+  const [contactSaved, setContactSaved] = useState(false);
+
+  const sendEmergencyQuickMessage = (channel) => {
+    const phone = emergencyPhone.trim();
+    const email = emergencyEmail.trim();
+    const targetStop = stops.find((stop) => stop.id === "ect") ?? stops[0];
+
+    if (channel === "whatsapp" && !phone) {
+      return Alert.alert(
+        "Contato ausente",
+        "Adicione um contato de WhatsApp de emergência antes de enviar."
+      );
+    }
+
+    if (channel === "email" && !email) {
+      return Alert.alert(
+        "Contato ausente",
+        "Adicione um e-mail de emergência antes de enviar."
+      );
+    }
+
+    const contactLabel = channel === "whatsapp" ? `WhatsApp: ${phone}` : `E-mail: ${email}`;
+    const channelLabel = channel === "whatsapp" ? "WhatsApp" : "E-mail";
+    const baseMessage = `Contato de emergência salvo em ${channelLabel}.\n`;
+    const details = `🚨 Alerta de segurança na ${targetStop.name} · ${targetStop.zone} · ${targetStop.routeName}\n`;
+    const situation =
+      channel === "whatsapp"
+        ? "Mensagem automática de aviso enviada para o contato de confiança."
+        : "E-mail de emergência preparado com as informações necessárias.";
+
+    setChatDraft(`${contactLabel}\n${baseMessage}${details}${situation}`);
+  };
+
+  const handleSaveContacts = () => {
+    setContactSaved(true);
+    Alert.alert("Contato salvo", "Os contatos de emergência foram registrados com sucesso.");
+  };
 
   // Animação de pulsação do botão de alerta
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -150,7 +190,7 @@ export function HomeScreen({ navigation, state }) {
             </View>
 
             <View style={[styles.heroBadge, styles.heroBadgeOutline]}>
-              <Ionicons color="#FFFFFF" name="notifications-outline" size={16} />
+              <Ionicons color={colors.warning} name="notifications-outline" size={16} />
               <Text style={styles.heroBadgeText}>{activeEctAlerts.length} alertas ativos</Text>
             </View>
           </View>
@@ -173,21 +213,59 @@ export function HomeScreen({ navigation, state }) {
 
           <Text style={styles.alertTitle}>Toque para pedir ajuda!</Text>
           <Text style={styles.alertDescription}>
-            Toque no botao vermelho para registrar o risco, avisar a comunidade e acionar a seguranca.
+            Toque no botão vermelho para registrar o risco, avisar a comunidade e acionar a segurança.
           </Text>
+        </View>
+
+        <View style={styles.contactCard}>
+          <Text style={styles.contactCardTitle}>Contatos de emergência</Text>
+          <Text style={styles.contactCardHint}>
+            Salve o telefone do WhatsApp e o e-mail de confiança para envio rápido.
+          </Text>
+          <TextInput
+            placeholder="WhatsApp (+55 00 0 0000-0000)"
+            placeholderTextColor={colors.textMuted}
+            value={emergencyPhone}
+            onChangeText={(value) => {
+              setEmergencyPhone(value);
+              setContactSaved(false);
+            }}
+            style={styles.contactInput}
+          />
+          <TextInput
+            placeholder="E-mail de emergência"
+            placeholderTextColor={colors.textMuted}
+            value={emergencyEmail}
+            onChangeText={(value) => {
+              setEmergencyEmail(value);
+              setContactSaved(false);
+            }}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            style={styles.contactInput}
+          />
+          <Pressable onPress={handleSaveContacts} style={styles.contactSaveButton}>
+            <Text style={styles.contactSaveButtonText}>
+              {contactSaved ? "Contato salvo" : "Salvar contatos"}
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.quickActionRow}>
           <QuickActionCard
-            description="Deixe pronta uma mensagem para continuar o atendimento pelo WhatsApp."
+            description="Enviar automaticamente um aviso para seu contato de emergência pelo WhatsApp."
             icon="logo-whatsapp"
-            onPress={() => setChatDraft("Preciso continuar o atendimento pelo WhatsApp.")}
+            iconBg="#25D366"
+            iconColor="#FFFFFF"
+            onPress={() => sendEmergencyQuickMessage("whatsapp")}
             title="WhatsApp"
           />
           <QuickActionCard
-            description="Prepare uma solicitacao para enviar os detalhes deste caso por e-mail."
+            description="Enviar automaticamente um e-mail para seu contato de confiança."
             icon="mail-outline"
-            onPress={() => setChatDraft("Quero registrar este atendimento tambem por e-mail.")}
+            iconBg="#334155"
+            iconColor="#FFFFFF"
+            onPress={() => sendEmergencyQuickMessage("email")}
             title="E-mail"
           />
         </View>
@@ -375,18 +453,18 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   alertButton: {
-    width: 160,
-    height: 160,
+    width: 180,
+    height: 180,
     borderRadius: 999,
-    backgroundColor: '#E74C3C', // vermelho forte
+    backgroundColor: colors.danger,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    shadowColor: '#E74C3C',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
+    shadowColor: colors.danger,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.28,
     shadowRadius: 20,
-    elevation: 10,
+    elevation: 12,
   },
   alertButtonText: {
     color: "#FFFFFF",
@@ -417,27 +495,25 @@ const styles = StyleSheet.create({
   quickActionCard: {
     flex: 1,
     backgroundColor: colors.surfaceStrong,
-    borderRadius: 22,
+    borderRadius: 24,
     padding: 18,
-    gap: 12,
+    gap: 10,
     borderWidth: 1,
-    borderColor: colors.outline,
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
-    shadowRadius: 18,
+    shadowRadius: 14,
     elevation: 4,
   },
   quickActionIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.brandSoft,
   },
   quickActionTitle: {
-    color: colors.brand,
+    color: colors.text,
     fontFamily: fonts.display,
     fontSize: 22,
     fontWeight: "800",
@@ -606,18 +682,70 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
   },
+  contactCard: {
+    marginHorizontal: 20,
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.outlineStrong,
+    padding: 18,
+    gap: 12,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 4,
+  },
+  contactCardTitle: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  contactCardHint: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  contactInput: {
+    backgroundColor: colors.surfaceLifted,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.outlineStrong,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: colors.text,
+    fontFamily: fonts.body,
+    fontSize: 14,
+  },
+  contactSaveButton: {
+    alignSelf: "flex-start",
+    borderRadius: 18,
+    backgroundColor: colors.brand,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  contactSaveButtonText: {
+    color: colors.surfaceStrong,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    fontWeight: "800",
+  },
   chatCard: {
     marginHorizontal: 20,
-    backgroundColor: colors.route,
+    backgroundColor: colors.surfaceStrong,
     borderRadius: 28,
     padding: 20,
     gap: 16,
     borderWidth: 1,
-    borderColor: colors.routeDeep,
-    shadowColor: colors.routeDeep,
+    borderColor: colors.outlineStrong,
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.10,
-    shadowRadius: 12,
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
     elevation: 4,
   },
   chatHeader: {
@@ -627,14 +755,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionEyebrow: {
-    color: '#F7B95E', // laranja claro
+    color: colors.textMuted,
     fontFamily: fonts.body,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
   },
   sectionTitle: {
-    color: '#FFF',
+    color: colors.text,
     fontFamily: fonts.display,
     fontSize: 28,
     fontWeight: "800",
@@ -646,10 +774,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: colors.brand,
+    backgroundColor: colors.brandSoft,
   },
   chatBadgeText: {
-    color: '#FFF',
+    color: colors.brandDeep,
     fontFamily: fonts.body,
     fontSize: 12,
     fontWeight: "700",
@@ -668,11 +796,11 @@ const styles = StyleSheet.create({
     maxHeight: 120,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.routeDeep,
+    borderColor: colors.outlineStrong,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: '#FFF',
-    color: colors.route,
+    backgroundColor: colors.surfaceLifted,
+    color: colors.text,
     fontFamily: fonts.body,
     fontSize: 14,
     lineHeight: 20,

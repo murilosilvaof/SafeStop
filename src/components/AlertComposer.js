@@ -24,6 +24,9 @@ export function AlertComposer({ defaultStopId, onClose, onSubmit, stops, visible
   const [message, setMessage] = useState("");
   const [anonymous, setAnonymous] = useState(false);
   const selectedStop = (stops && stops.find((stop) => stop.id === stopId)) ?? (stops ? stops[0] : null);
+  const alertLocation = selectedStop
+    ? `${selectedStop.name} · ${selectedStop.zone} · ${selectedStop.routeName}`
+    : "Localização não disponível";
 
 if (!selectedStop) return null;
 
@@ -45,9 +48,10 @@ if (!selectedStop) return null;
 
     onSubmit({
       anonymous,
-      message: message.trim(),
+      message: `${message.trim()}\n\nLocalização: ${alertLocation}`,
       riskLevel,
       stopId,
+      location: alertLocation,
     });
   };
 
@@ -62,11 +66,11 @@ if (!selectedStop) return null;
         <View style={styles.sheet}>
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
-              <Text style={styles.eyebrow}>Alerta da parada piloto</Text>
-              <Text style={styles.title}>Registrar ocorrencia na ECT</Text>
+              <Text style={styles.eyebrow}>Registrar ocorrência</Text>
+              <Text style={styles.title}>Alerta rápido e seguro</Text>
               <Text style={styles.description}>
-                O aviso vai para usuarios proximos e para a seguranca patrimonial com prioridade na
-                parada da ECT.
+                Envie um alerta direto para a equipe patrimonial e usuários próximos com todos os
+                dados necessários para ação rápida.
               </Text>
             </View>
 
@@ -84,6 +88,21 @@ if (!selectedStop) return null;
                   <StatusPill label="Piloto" tone="accent" />
                 </View>
                 <Text style={styles.focusDescription}>{selectedStop.recommendedWaitArea}</Text>
+              </View>
+
+              <View style={styles.locationCard}>
+                <Text style={styles.locationLabel}>Localização automática</Text>
+                <Text style={styles.locationValue}>{alertLocation}</Text>
+                <View style={styles.locationGrid}>
+                  <View style={styles.locationItem}>
+                    <Text style={styles.locationItemLabel}>Parada</Text>
+                    <Text style={styles.locationItemValue}>{selectedStop.name}</Text>
+                  </View>
+                  <View style={styles.locationItem}>
+                    <Text style={styles.locationItemLabel}>Linha</Text>
+                    <Text style={styles.locationItemValue}>{selectedStop.routeName}</Text>
+                  </View>
+                </View>
               </View>
             </View>
 
@@ -116,11 +135,14 @@ if (!selectedStop) return null;
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Mensagem do alerta</Text>
+              <View style={styles.sectionLabelRow}>
+                <Text style={styles.sectionTitle}>Mensagem do alerta</Text>
+                <Text style={styles.sectionHint}>Inclua o que você viu e o que está acontecendo agora.</Text>
+              </View>
               <TextInput
                 multiline
                 onChangeText={setMessage}
-                placeholder="Exemplo: iluminacao baixa, abordagem suspeita, grupo intimidando quem espera o circular..."
+                placeholder="Ex: grupo suspeito próximo ao ponto, iluminação apagada, carros parados na faixa..."
                 placeholderTextColor={colors.textMuted}
                 style={styles.messageInput}
                 textAlignVertical="top"
@@ -156,7 +178,7 @@ if (!selectedStop) return null;
                 onPress={handleSubmit}
                 style={[styles.primaryButton, !message.trim() && styles.primaryButtonDisabled]}
               >
-                <Text style={styles.primaryButtonText}>Disparar alerta</Text>
+                <Text style={styles.primaryButtonText}>Registrar ocorrência</Text>
               </Pressable>
             </View>
           </ScrollView>
@@ -173,7 +195,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(2, 6, 23, 0.72)",
+    backgroundColor: "rgba(3, 12, 36, 0.48)",
   },
   sheet: {
     maxHeight: "92%",
@@ -182,6 +204,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceStrong,
     borderTopWidth: 1,
     borderColor: colors.outlineStrong,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: -12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 16,
   },
   content: {
     paddingHorizontal: 20,
@@ -218,16 +245,27 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: colors.text,
     fontFamily: fonts.body,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "800",
+  },
+  sectionLabelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+  },
+  sectionHint: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 12,
   },
   focusCard: {
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: colors.outlineStrong,
-    padding: 16,
-    gap: 12,
+    padding: 18,
+    gap: 14,
   },
   focusHeader: {
     flexDirection: "row",
@@ -238,14 +276,14 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 16,
-    backgroundColor: "rgba(240, 68, 68, 0.18)",
+    backgroundColor: colors.brandSoft,
     borderWidth: 1,
-    borderColor: "rgba(240, 68, 68, 0.28)",
+    borderColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
   },
   focusIconText: {
-    color: colors.dangerSoft,
+    color: colors.brandDeep,
     fontFamily: fonts.display,
     fontSize: 14,
     fontWeight: "800",
@@ -294,12 +332,12 @@ const styles = StyleSheet.create({
   },
   messageInput: {
     minHeight: 150,
-    backgroundColor: colors.surface,
-    borderRadius: 20,
+    backgroundColor: colors.surfaceLifted,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: colors.outline,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    borderColor: colors.outlineStrong,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
     color: colors.text,
     fontFamily: fonts.body,
     fontSize: 15,
@@ -310,10 +348,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 16,
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceLifted,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: colors.outline,
+    borderColor: colors.outlineStrong,
     padding: 16,
   },
   toggleTextBlock: {
@@ -346,18 +384,71 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
   },
+  locationCard: {
+    backgroundColor: colors.surfaceLifted,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.outlineStrong,
+    padding: 16,
+    gap: 12,
+  },
+  locationLabel: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    textTransform: "uppercase",
+    fontWeight: "700",
+  },
+  locationValue: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 15,
+    fontWeight: "700",
+    lineHeight: 22,
+  },
+  locationGrid: {
+    flexDirection: "row",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+  locationItem: {
+    flex: 1,
+    minWidth: 120,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    padding: 12,
+  },
+  locationItemLabel: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  locationItemValue: {
+    color: colors.text,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    fontWeight: "700",
+  },
   primaryButton: {
     flex: 1.2,
     borderRadius: 18,
     paddingVertical: 15,
     alignItems: "center",
     backgroundColor: colors.danger,
+    shadowColor: colors.danger,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 6,
   },
   primaryButtonDisabled: {
     opacity: 0.48,
   },
   primaryButtonText: {
-    color: colors.text,
+    color: colors.surfaceStrong,
     fontFamily: fonts.body,
     fontSize: 14,
     fontWeight: "800",

@@ -9,6 +9,7 @@ import {
   Platform 
 } from "react-native";
 import { globalStyles as styles } from "../styles/globalStyles";
+import { colors } from "../constants/theme";
 import { ChatMessageBubble } from "../components/ChatMessageBubble";
 import { NoticeItem } from "../components/NoticeItem";
 import { SectionCard } from "../components/SectionCard";
@@ -62,20 +63,26 @@ export function ChatScreen({ state }) {
       </ScrollView>
 
       {/* Campo de Entrada de Mensagem */}
-      <View style={[styles.chatComposer, { padding: 20, backgroundColor: '#081015' }]}>
+      <View
+        style={[
+          styles.chatComposer,
+          {
+            backgroundColor: colors.surfaceStrong,
+            paddingHorizontal: 20,
+            paddingVertical: 18,
+          },
+        ]}
+      >
         <TextInput
           style={styles.chatInput}
           placeholder="Descreva a situação para a central..."
-          placeholderTextColor="#92A3AE"
+          placeholderTextColor={colors.textMuted}
           value={chatDraft}
           onChangeText={setChatDraft}
           multiline
         />
-        <Pressable 
-          style={[styles.alertButton, { paddingHorizontal: 20, justifyContent: 'center' }]} 
-          onPress={handleSend}
-        >
-          <Text style={{ color: "#FFF", fontWeight: "800" }}>Enviar</Text>
+        <Pressable style={styles.chatButton} onPress={handleSend}>
+          <Text style={styles.chatButtonText}>Enviar</Text>
         </Pressable>
       </View>
     </KeyboardAvoidingView>
