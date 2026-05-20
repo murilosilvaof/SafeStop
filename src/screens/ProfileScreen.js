@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -38,9 +39,9 @@ function SettingRow({ description, label, onToggle, value }) {
   );
 }
 
-function ProfileAction({ danger, icon, label }) {
+function ProfileAction({ danger, icon, label, onPress }) {
   return (
-    <Pressable style={styles.profileAction}>
+    <Pressable onPress={onPress} style={styles.profileAction}>
       <View style={[styles.profileActionIcon, danger && styles.profileActionDangerIcon]}>
         <Ionicons color={danger ? colors.route : colors.text} name={icon} size={18} />
       </View>
@@ -52,16 +53,31 @@ function ProfileAction({ danger, icon, label }) {
   );
 }
 
+function buildInitials(fullName) {
+  return fullName
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((token) => token[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 export function ProfileScreen({ state }) {
-  const { alerts, chatMessages } = state;
+  const { alerts, chatMessages, clearProfile, connectionStatus, profile } = state;
   const [notifAlerts, setNotifAlerts] = useState(true);
-  const [notifSchedules, setNotifSchedules] = useState(true);
+  const [notifHardware, setNotifHardware] = useState(true);
   const [notifSupport, setNotifSupport] = useState(true);
   const [shareLocation, setShareLocation] = useState(true);
 
   const totalAlerts = alerts.length;
   const activeAlerts = alerts.filter((alert) => alert.status !== "resolvido").length;
   const totalMessages = chatMessages.length;
+  const initials = buildInitials(profile?.fullName ?? "Safe Stop");
+
+  const handleSignOut = async () => {
+    await clearProfile();
+    Alert.alert("Cadastro removido", "Os dados locais foram apagados do dispositivo.");
+  };
 
   return (
     <ScrollView
@@ -71,24 +87,26 @@ export function ProfileScreen({ state }) {
     >
       <View style={styles.header}>
         <Text style={styles.eyebrow}>MINHA CONTA</Text>
-        <Text style={styles.title}>Perfil do usuario</Text>
+        <Text style={styles.title}>Perfil operacional</Text>
         <Text style={styles.subtitle}>
-          Ajuste suas notificacoes, acompanhe sua atividade e mantenha os alertas do app do seu
-          jeito.
+          O cadastro abaixo e o mesmo enviado para o backend Python quando o app abre e restabelece
+          a conexao em tempo real.
         </Text>
       </View>
 
       <View style={styles.profileCard}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>SU</Text>
+          <Text style={styles.avatarText}>{initials || "SS"}</Text>
         </View>
 
         <View style={styles.profileCopy}>
-          <Text style={styles.profileName}>Usuario UFRN</Text>
-          <Text style={styles.profileEmail}>usuario@ufrn.br</Text>
+          <Text style={styles.profileName}>{profile?.fullName ?? "Usuario UFRN"}</Text>
+          <Text style={styles.profileEmail}>{profile?.ufrnId ?? "Vinculo nao informado"}</Text>
 
           <View style={styles.profileBadge}>
-            <Text style={styles.profileBadgeText}>Comunidade ativa</Text>
+            <Text style={styles.profileBadgeText}>
+              {connectionStatus === "connected" ? "Conectado a central" : "Aguardando servidor"}
+            </Text>
           </View>
         </View>
       </View>
@@ -100,6 +118,18 @@ export function ProfileScreen({ state }) {
       </View>
 
       <View style={styles.sectionCard}>
+        <Text style={styles.sectionEyebrow}>Cadastro local</Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Contato de emergencia</Text>
+          <Text style={styles.infoValue}>{profile?.emergencyContact ?? "Nao informado"}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Backend</Text>
+          <Text style={styles.infoValue}>{connectionStatus}</Text>
+        </View>
+      </View>
+
+      <View style={styles.sectionCard}>
         <Text style={styles.sectionEyebrow}>Notificacoes</Text>
         <SettingRow
           description="Receba aviso quando a comunidade acionar um novo alerta."
@@ -108,10 +138,10 @@ export function ProfileScreen({ state }) {
           value={notifAlerts}
         />
         <SettingRow
-          description="Seja avisado um pouco antes da chegada dos proximos onibus."
-          label="Horarios dos onibus"
-          onToggle={setNotifSchedules}
-          value={notifSchedules}
+          description="Receba aviso automatico quando um totem ESP32 disparar emergencia."
+          label="Eventos do hardware"
+          onToggle={setNotifHardware}
+          value={notifHardware}
         />
         <SettingRow
           description="Continue recebendo retorno da central sobre o seu atendimento."
@@ -133,10 +163,17 @@ export function ProfileScreen({ state }) {
 
       <View style={styles.sectionCard}>
         <Text style={styles.sectionEyebrow}>Conta</Text>
-        <ProfileAction icon="information-circle-outline" label="Sobre o Safe Stop" />
-        <ProfileAction icon="document-text-outline" label="Termos de uso" />
-        <ProfileAction icon="chatbox-ellipses-outline" label="Falar com a equipe" />
-        <ProfileAction danger icon="log-out-outline" label="Sair da conta" />
+        <ProfileAction
+          icon="server-outline"
+          label="Servidor: safestop.ect.ufrn.br"
+          onPress={() => {}}
+        />
+        <ProfileAction
+          icon="shield-outline"
+          label="Canal protegido via Socket.IO"
+          onPress={() => {}}
+        />
+        <ProfileAction danger icon="trash-outline" label="Apagar cadastro local" onPress={handleSignOut} />
       </View>
     </ScrollView>
   );
@@ -209,7 +246,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   profileEmail: {
-    color: "#FFE6E6",
+    color: "#E8F1FF",
     fontFamily: fonts.body,
     fontSize: 14,
   },
@@ -270,6 +307,25 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     marginBottom: 6,
+  },
+  infoRow: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.outline,
+    gap: 4,
+  },
+  infoLabel: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  infoValue: {
+    color: colors.text,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    fontWeight: "700",
   },
   settingRow: {
     flexDirection: "row",

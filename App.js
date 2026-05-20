@@ -1,5 +1,5 @@
 import React from "react";
-import { SafeAreaView, StatusBar, StyleSheet, View, Image, Text } from "react-native";
+import { SafeAreaView, StatusBar, StyleSheet, View, Image, Text, ActivityIndicator } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
@@ -9,12 +9,36 @@ import { useSafeStopState } from "./src/hooks/useSafeStopState";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { SchedulesScreen } from "./src/screens/SchedulesScreen";
+import { RegistrationScreen } from "./src/screens/RegistrationScreen";
+import { ContactsScreen } from "./src/screens/ContactsScreen";
 
 const logo = require("./assets/logo.jpeg");
 const Tab = createBottomTabNavigator();
 
+function LoadingScreen() {
+  return (
+    <SafeAreaView style={styles.loadingScreen}>
+      <ActivityIndicator color={colors.brand} size="large" />
+      <Text style={styles.loadingText}>Carregando cadastro local do SafeStop...</Text>
+    </SafeAreaView>
+  );
+}
+
 export default function App() {
   const state = useSafeStopState();
+
+  if (!state.isReady) {
+    return <LoadingScreen />;
+  }
+
+  if (!state.hasProfile) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar backgroundColor={colors.background} barStyle="dark-content" />
+        <RegistrationScreen onSubmit={state.saveProfile} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <NavigationContainer>
@@ -25,8 +49,24 @@ export default function App() {
         <View style={styles.header}>
           <Image source={logo} style={styles.logo} resizeMode="contain" />
           <View style={styles.brandCopy}>
-            <Text style={styles.brandTitle}>SafeStop</Text>
-            <Text style={styles.brandSubtitle}>Atendimento seguro e moderno</Text>
+            <Text style={styles.brandTitle}>SafeStop UFRN</Text>
+            <Text style={styles.brandSubtitle}>
+              {state.connectionStatus === "connected"
+                ? "Central online em producao"
+                : "Aguardando conexao com a central"}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.connectionBadge,
+              state.connectionStatus === "connected"
+                ? styles.connectionBadgeOnline
+                : styles.connectionBadgeOffline,
+            ]}
+          >
+            <Text style={styles.connectionBadgeText}>
+              {state.connectionStatus === "connected" ? "Online" : "Offline"}
+            </Text>
           </View>
         </View>
 
@@ -39,20 +79,25 @@ export default function App() {
             tabBarLabelStyle: styles.tabLabel,
             tabBarIcon: ({ color, size }) => {
               const icons = {
-                Principal: "warning-outline",
+                Central: "shield-checkmark-outline",
                 Horarios: "bus-outline",
+                Contatos: "call-outline",
                 Perfil: "person-outline",
               };
               return <Ionicons color={color} name={icons[route.name] ?? "ellipse"} size={size} />;
             },
           })}
         >
-          <Tab.Screen name="Principal">
+          <Tab.Screen name="Central">
             {(props) => <HomeScreen {...props} state={state} />}
           </Tab.Screen>
 
           <Tab.Screen name="Horarios">
             {(props) => <SchedulesScreen {...props} state={state} />}
+          </Tab.Screen>
+
+          <Tab.Screen name="Contatos">
+            {(props) => <ContactsScreen {...props} state={state} />}
           </Tab.Screen>
 
           <Tab.Screen name="Perfil">
@@ -69,6 +114,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  loadingScreen: {
+    flex: 1,
+    backgroundColor: colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 14,
+  },
+  loadingText: {
+    color: colors.textSoft,
+    fontSize: 14,
+    fontWeight: "700",
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -77,12 +134,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceStrong,
     borderBottomWidth: 1,
     borderBottomColor: colors.outlineStrong,
+    gap: 12,
   },
   logo: {
     width: 60,
     height: 60,
     borderRadius: 14,
-    marginRight: 14,
   },
   brandCopy: {
     flex: 1,
@@ -97,6 +154,22 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
     marginTop: 2,
+  },
+  connectionBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  connectionBadgeOnline: {
+    backgroundColor: "#E7F8EF",
+  },
+  connectionBadgeOffline: {
+    backgroundColor: "#FFF2E8",
+  },
+  connectionBadgeText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: "800",
   },
   tabBar: {
     backgroundColor: colors.surfaceStrong,

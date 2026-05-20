@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Alert,
   ImageBackground,
@@ -10,27 +10,47 @@ import {
   Text,
   TextInput,
   View,
-  Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { AlertComposer } from "../components/AlertComposer";
 import { ChatMessageBubble } from "../components/ChatMessageBubble";
+import { OperationalMapCard } from "../components/OperationalMapCard";
 import { StatusPill } from "../components/StatusPill";
 import { colors, fonts } from "../constants/theme";
-import { riskMeta } from "../data/mockData";
+import { riskMeta } from "../data/stops";
 
 const ectHeroImage = require("../../assets/ect-campus-banner.png");
 
-function QuickActionCard({ description, icon, iconBg, iconColor, onPress, title }) {
+function QuickStatusCard({ icon, title, value, tone = "default" }) {
+  const accentMap = {
+    default: {
+      backgroundColor: colors.surfaceLifted,
+      iconBackgroundColor: colors.brandSoft,
+      iconColor: colors.brand,
+    },
+    warning: {
+      backgroundColor: "#FFF4E5",
+      iconBackgroundColor: "#FFE0B5",
+      iconColor: "#B86B00",
+    },
+    success: {
+      backgroundColor: "#ECF9F1",
+      iconBackgroundColor: "#D2F0E0",
+      iconColor: colors.success,
+    },
+  };
+
+  const accent = accentMap[tone] ?? accentMap.default;
+
   return (
-    <Pressable onPress={onPress} style={[styles.quickActionCard, { borderColor: iconBg || colors.outlineStrong }]}> 
-      <View style={[styles.quickActionIcon, { backgroundColor: iconBg || colors.brandSoft }]}> 
-        <Ionicons color={iconColor || colors.surface} name={icon} size={24} />
+    <View style={[styles.quickStatusCard, { backgroundColor: accent.backgroundColor }]}>
+      <View style={[styles.quickStatusIcon, { backgroundColor: accent.iconBackgroundColor }]}>
+        <Ionicons color={accent.iconColor} name={icon} size={20} />
       </View>
-      <Text style={styles.quickActionTitle}>{title}</Text>
-      <Text style={styles.quickActionText}>{description}</Text>
-    </Pressable>
+      <Text style={styles.quickStatusValue}>{value}</Text>
+      <Text style={styles.quickStatusTitle}>{title}</Text>
+    </View>
   );
 }
 
@@ -38,131 +58,63 @@ export function HomeScreen({ navigation, state }) {
   const {
     alerts,
     chatMessages,
+    connectionStatus,
+    lastHardwareAlert,
     notices,
+    profile,
+    selectedStop,
+    selectedStopId,
     sendChatMessage,
     setSelectedStopId,
     stops,
     submitAlert,
   } = state;
   const [chatDraft, setChatDraft] = useState("");
-  const [emergencyPhone, setEmergencyPhone] = useState("");
-  const [emergencyEmail, setEmergencyEmail] = useState("");
   const [isComposerVisible, setComposerVisible] = useState(false);
-  const [contactSaved, setContactSaved] = useState(false);
 
-  const sendEmergencyQuickMessage = (channel) => {
-    const phone = emergencyPhone.trim();
-    const email = emergencyEmail.trim();
-    const targetStop = stops.find((stop) => stop.id === "ect") ?? stops[0];
+  const stop = selectedStop ?? stops[0];
+  const stopRisk = riskMeta[stop?.riskLevel ?? "monitorando"];
+  const stopAlerts = alerts.filter(
+    (alert) => alert.stopId === stop?.id && alert.status !== "resolvido"
+  );
+  const latestNotice = notices[0] ?? null;
+  const previewMessages = useMemo(() => chatMessages.slice(-4), [chatMessages]);
+  const firstName = profile?.fullName?.split(" ")[0] ?? "Usuario";
 
-    if (channel === "whatsapp" && !phone) {
-      return Alert.alert(
-        "Contato ausente",
-        "Adicione um contato de WhatsApp de emergência antes de enviar."
-      );
-    }
-
-    if (channel === "email" && !email) {
-      return Alert.alert(
-        "Contato ausente",
-        "Adicione um e-mail de emergência antes de enviar."
-      );
-    }
-
-    const contactLabel = channel === "whatsapp" ? `WhatsApp: ${phone}` : `E-mail: ${email}`;
-    const channelLabel = channel === "whatsapp" ? "WhatsApp" : "E-mail";
-    const baseMessage = `Contato de emergência salvo em ${channelLabel}.\n`;
-    const details = `🚨 Alerta de segurança na ${targetStop.name} · ${targetStop.zone} · ${targetStop.routeName}\n`;
-    const situation =
-      channel === "whatsapp"
-        ? "Mensagem automática de aviso enviada para o contato de confiança."
-        : "E-mail de emergência preparado com as informações necessárias.";
-
-    setChatDraft(`${contactLabel}\n${baseMessage}${details}${situation}`);
-  };
-
-  const handleSaveContacts = () => {
-    setContactSaved(true);
-    Alert.alert("Contato salvo", "Os contatos de emergência foram registrados com sucesso.");
-  };
-
-  // Animação de pulsação do botão de alerta
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    // Animação de pulsação contínua
-    const pulseAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.08,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    // Animação de brilho pulsante
-    const glowAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowAnim, {
-          toValue: 0,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    pulseAnimation.start();
-    glowAnimation.start();
-
-    return () => {
-      pulseAnimation.stop();
-      glowAnimation.stop();
-    };
-  }, [pulseAnim, glowAnim]);
-
-  const ectStop = stops.find((stop) => stop.id === "ect") ?? stops[0];
-
-  if (!ectStop) {
+  if (!stop) {
     return null;
   }
 
-  const ectRisk = riskMeta[ectStop.riskLevel];
-  const activeEctAlerts = alerts.filter(
-    (alert) => alert.stopId === ectStop.id && alert.status !== "resolvido"
-  );
-  const previewMessages = chatMessages.slice(-3);
-  const latestNotice = notices[0];
-
-  const handleAlertSubmit = (alertData) => {
-    submitAlert(alertData);
-    setComposerVisible(false);
-  };
-
   const handleSendMessage = () => {
-    const nextMessage = chatDraft.trim();
+    const wasSent = sendChatMessage(chatDraft);
 
-    if (!nextMessage) {
+    if (!wasSent) {
+      Alert.alert(
+        "Sem conexao com a central",
+        "Conecte o app ao backend Python para enviar mensagens em tempo real."
+      );
       return;
     }
 
-    sendChatMessage(nextMessage);
     setChatDraft("");
   };
 
+  const handleAlertSubmit = (alertData) => {
+    const wasSent = submitAlert(alertData);
+
+    if (!wasSent) {
+      Alert.alert(
+        "Servidor indisponivel",
+        "Nao foi possivel registrar o alerta agora. Verifique o backend e tente novamente."
+      );
+      return;
+    }
+
+    setComposerVisible(false);
+  };
+
   const openSchedules = () => {
-    setSelectedStopId(ectStop.id);
+    setSelectedStopId(stop.id);
     navigation.navigate("Horarios");
   };
 
@@ -171,123 +123,94 @@ export function HomeScreen({ navigation, state }) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.screen}
     >
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
-          <Text style={styles.heroEyebrow}>SAFE STOP | ALERTA</Text>
-          <Text style={styles.heroTitle}>Central Atendimento</Text>
+          <Text style={styles.heroEyebrow}>SAFE STOP | OPERACAO</Text>
+          <Text style={styles.heroTitle}>Central em tempo real</Text>
           <Text style={styles.heroSubtitle}>
-            Acione ajuda imediata na parada da ECT, acompanhe o ponto monitorado e fale com a
-            central no mesmo lugar.
+            {firstName}, esse fluxo agora depende do backend oficial, do Socket.IO e do broker MQTT
+            da universidade.
           </Text>
 
           <View style={styles.heroBadgeRow}>
             <View style={styles.heroBadge}>
-              <View style={styles.heroBadgeDot} />
-              <Text style={styles.heroBadgeText}>Central online</Text>
+              <View
+                style={[
+                  styles.heroBadgeDot,
+                  connectionStatus === "connected" ? styles.heroBadgeDotOnline : styles.heroBadgeDotOffline,
+                ]}
+              />
+              <Text style={styles.heroBadgeText}>
+                {connectionStatus === "connected"
+                  ? "Central sincronizada"
+                  : "Aguardando backend"}
+              </Text>
             </View>
 
             <View style={[styles.heroBadge, styles.heroBadgeOutline]}>
-              <Ionicons color={colors.warning} name="notifications-outline" size={16} />
-              <Text style={styles.heroBadgeText}>{activeEctAlerts.length} alertas ativos</Text>
+              <Ionicons color={colors.warning} name="warning-outline" size={16} />
+              <Text style={styles.heroBadgeText}>{stopAlerts.length} alertas ativos</Text>
             </View>
           </View>
         </View>
 
+        <View style={styles.statusRow}>
+          <QuickStatusCard
+            icon="chatbubble-ellipses-outline"
+            title="Mensagens"
+            value={String(chatMessages.length)}
+          />
+          <QuickStatusCard
+            icon="hardware-chip-outline"
+            title="Totens em monitoramento"
+            tone="success"
+            value={String(stops.length)}
+          />
+          <QuickStatusCard
+            icon="alert-circle-outline"
+            title="Ultimo nivel"
+            tone={stop.riskLevel === "emergencia" ? "warning" : "default"}
+            value={stopRisk.label}
+          />
+        </View>
+
         <View style={styles.alertCard}>
-          <Animated.View
-            style={{
-              transform: [{ scale: pulseAnim }],
-            }}
-          >
-            <Pressable
-              onPress={() => setComposerVisible(true)}
-              style={styles.alertButton}
-            >
-              <Ionicons color="#FFFFFF" name="warning" size={48} />
-              <Text style={styles.alertButtonText}>ALERTA</Text>
-            </Pressable>
-          </Animated.View>
-
-          <Text style={styles.alertTitle}>Toque para pedir ajuda!</Text>
-          <Text style={styles.alertDescription}>
-            Toque no botão vermelho para registrar o risco, avisar a comunidade e acionar a segurança.
-          </Text>
-        </View>
-
-        <View style={styles.contactCard}>
-          <Text style={styles.contactCardTitle}>Contatos de emergência</Text>
-          <Text style={styles.contactCardHint}>
-            Salve o telefone do WhatsApp e o e-mail de confiança para envio rápido.
-          </Text>
-          <TextInput
-            placeholder="WhatsApp (+55 00 0 0000-0000)"
-            placeholderTextColor={colors.textMuted}
-            value={emergencyPhone}
-            onChangeText={(value) => {
-              setEmergencyPhone(value);
-              setContactSaved(false);
-            }}
-            style={styles.contactInput}
-          />
-          <TextInput
-            placeholder="E-mail de emergência"
-            placeholderTextColor={colors.textMuted}
-            value={emergencyEmail}
-            onChangeText={(value) => {
-              setEmergencyEmail(value);
-              setContactSaved(false);
-            }}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            style={styles.contactInput}
-          />
-          <Pressable onPress={handleSaveContacts} style={styles.contactSaveButton}>
-            <Text style={styles.contactSaveButtonText}>
-              {contactSaved ? "Contato salvo" : "Salvar contatos"}
-            </Text>
+          <Pressable onPress={() => setComposerVisible(true)} style={styles.alertButton}>
+            <Ionicons color="#FFFFFF" name="warning" size={48} />
+            <Text style={styles.alertButtonText}>ALERTA</Text>
           </Pressable>
+
+          <Text style={styles.alertTitle}>Acionar ajuda imediata</Text>
+          <Text style={styles.alertDescription}>
+            O alerta vai direto para a central, para o painel de seguranca e para os usuarios
+            conectados.
+          </Text>
         </View>
 
-        <View style={styles.quickActionRow}>
-          <QuickActionCard
-            description="Enviar automaticamente um aviso para seu contato de emergência pelo WhatsApp."
-            icon="logo-whatsapp"
-            iconBg="#25D366"
-            iconColor="#FFFFFF"
-            onPress={() => sendEmergencyQuickMessage("whatsapp")}
-            title="WhatsApp"
-          />
-          <QuickActionCard
-            description="Enviar automaticamente um e-mail para seu contato de confiança."
-            icon="mail-outline"
-            iconBg="#334155"
-            iconColor="#FFFFFF"
-            onPress={() => sendEmergencyQuickMessage("email")}
-            title="E-mail"
-          />
-        </View>
+        <OperationalMapCard
+          highlightedStopId={lastHardwareAlert?.stopId}
+          lastHardwareAlert={lastHardwareAlert}
+          stops={stops}
+        />
 
         <ImageBackground imageStyle={styles.stopImage} source={ectHeroImage} style={styles.stopCard}>
           <View style={styles.stopOverlay} />
 
           <View style={styles.stopHeader}>
             <View style={styles.stopHeaderCopy}>
-              <Text style={styles.stopEyebrow}>Parada monitorada</Text>
-              <Text style={styles.stopTitle}>{ectStop.name}</Text>
+              <Text style={styles.stopEyebrow}>Parada acompanhada agora</Text>
+              <Text style={styles.stopTitle}>{stop.name}</Text>
               <Text style={styles.stopMeta}>
-                {ectStop.zone} | {ectStop.routeName}
+                {stop.zone} | {stop.routeName}
               </Text>
             </View>
-            <StatusPill label={ectRisk.label} tone={ectRisk.tone} />
+            <StatusPill label={stopRisk.label} tone={stopRisk.tone} />
           </View>
 
-          <Text style={styles.stopDescription}>{ectStop.recommendedWaitArea}</Text>
+          <Text style={styles.stopDescription}>{stop.recommendedWaitArea}</Text>
 
           <View style={styles.arrivalRow}>
-            {ectStop.nextArrivals.slice(0, 3).map((time, index) => (
+            {stop.nextArrivals.slice(0, 3).map((time, index) => (
               <View key={time} style={styles.arrivalChip}>
                 <Text style={styles.arrivalLabel}>{index === 0 ? "Proximo" : "Depois"}</Text>
                 <Text style={styles.arrivalValue}>{time}</Text>
@@ -298,7 +221,7 @@ export function HomeScreen({ navigation, state }) {
           <View style={styles.stopFooter}>
             <View style={styles.stopInfoPill}>
               <Ionicons color="#FFFFFF" name="shield-checkmark-outline" size={16} />
-              <Text style={styles.stopInfoPillText}>{ectStop.safetyWindow}</Text>
+              <Text style={styles.stopInfoPillText}>{stop.safetyWindow}</Text>
             </View>
 
             <Pressable onPress={openSchedules} style={styles.stopLinkButton}>
@@ -324,19 +247,51 @@ export function HomeScreen({ navigation, state }) {
           <View style={styles.chatHeader}>
             <View>
               <Text style={styles.sectionEyebrow}>Atendimento</Text>
-              <Text style={styles.sectionTitle}>Chat da central</Text>
+              <Text style={styles.sectionTitle}>Chat com a central</Text>
             </View>
 
             <View style={styles.chatBadge}>
-              <Ionicons color={colors.route} name="chatbubble-ellipses-outline" size={16} />
-              <Text style={styles.chatBadgeText}>{chatMessages.length} mensagens</Text>
+              <Ionicons color={colors.route} name="wifi-outline" size={16} />
+              <Text style={styles.chatBadgeText}>
+                {connectionStatus === "connected" ? "Canal ativo" : "Canal indisponivel"}
+              </Text>
             </View>
           </View>
 
+          <View style={styles.stopSelectorRow}>
+            {stops.map((campusStop) => {
+              const isSelected = campusStop.id === selectedStopId;
+
+              return (
+                <Pressable
+                  key={campusStop.id}
+                  onPress={() => setSelectedStopId(campusStop.id)}
+                  style={[styles.stopSelectorChip, isSelected && styles.stopSelectorChipActive]}
+                >
+                  <Text
+                    style={[
+                      styles.stopSelectorChipText,
+                      isSelected && styles.stopSelectorChipTextActive,
+                    ]}
+                  >
+                    {campusStop.shortCode}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
           <View style={styles.chatList}>
-            {previewMessages.map((message) => (
-              <ChatMessageBubble key={message.id} message={message} />
-            ))}
+            {previewMessages.length > 0 ? (
+              previewMessages.map((message) => (
+                <ChatMessageBubble key={message.id} message={message} />
+              ))
+            ) : (
+              <Text style={styles.emptyChatText}>
+                Assim que a central responder ou voce enviar a primeira mensagem, a conversa aparece
+                aqui.
+              </Text>
+            )}
           </View>
 
           <View style={styles.chatComposer}>
@@ -357,7 +312,7 @@ export function HomeScreen({ navigation, state }) {
       </ScrollView>
 
       <AlertComposer
-        defaultStopId={ectStop.id}
+        defaultStopId={stop.id}
         onClose={() => setComposerVisible(false)}
         onSubmit={handleAlertSubmit}
         stops={stops}
@@ -382,7 +337,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 36,
     paddingTop: 30,
     paddingHorizontal: 24,
-    paddingBottom: 120,
+    paddingBottom: 36,
     gap: 14,
   },
   heroEyebrow: {
@@ -427,7 +382,12 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 999,
+  },
+  heroBadgeDotOnline: {
     backgroundColor: colors.success,
+  },
+  heroBadgeDotOffline: {
+    backgroundColor: colors.danger,
   },
   heroBadgeText: {
     color: colors.text,
@@ -435,9 +395,38 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
+  statusRow: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 20,
+  },
+  quickStatusCard: {
+    flex: 1,
+    borderRadius: 24,
+    padding: 16,
+    gap: 8,
+  },
+  quickStatusIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  quickStatusValue: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 22,
+    fontWeight: "800",
+  },
+  quickStatusTitle: {
+    color: colors.textSoft,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    fontWeight: "700",
+  },
   alertCard: {
     marginHorizontal: 20,
-    marginTop: -88,
     backgroundColor: colors.surfaceStrong,
     borderRadius: 30,
     paddingHorizontal: 20,
@@ -486,43 +475,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 16,
     lineHeight: 25,
-  },
-  quickActionRow: {
-    flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 20,
-  },
-  quickActionCard: {
-    flex: 1,
-    backgroundColor: colors.surfaceStrong,
-    borderRadius: 24,
-    padding: 18,
-    gap: 10,
-    borderWidth: 1,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 4,
-  },
-  quickActionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  quickActionTitle: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 22,
-    fontWeight: "800",
-  },
-  quickActionText: {
-    color: colors.textSoft,
-    fontFamily: fonts.body,
-    fontSize: 14,
-    lineHeight: 22,
   },
   stopCard: {
     marginHorizontal: 20,
@@ -682,58 +634,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
   },
-  contactCard: {
-    marginHorizontal: 20,
-    backgroundColor: colors.surface,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.outlineStrong,
-    padding: 18,
-    gap: 12,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    elevation: 4,
-  },
-  contactCardTitle: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  contactCardHint: {
-    color: colors.textMuted,
-    fontFamily: fonts.body,
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  contactInput: {
-    backgroundColor: colors.surfaceLifted,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.outlineStrong,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: colors.text,
-    fontFamily: fonts.body,
-    fontSize: 14,
-  },
-  contactSaveButton: {
-    alignSelf: "flex-start",
-    borderRadius: 18,
-    backgroundColor: colors.brand,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  contactSaveButtonText: {
-    color: colors.surfaceStrong,
-    fontFamily: fonts.body,
-    fontSize: 14,
-    fontWeight: "800",
-  },
   chatCard: {
     marginHorizontal: 20,
     backgroundColor: colors.surfaceStrong,
@@ -782,8 +682,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
+  stopSelectorRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  stopSelectorChip: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: colors.surfaceLifted,
+    borderWidth: 1,
+    borderColor: colors.outlineStrong,
+  },
+  stopSelectorChipActive: {
+    backgroundColor: colors.brand,
+    borderColor: colors.brand,
+  },
+  stopSelectorChipText: {
+    color: colors.text,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  stopSelectorChipTextActive: {
+    color: "#FFFFFF",
+  },
   chatList: {
     gap: 12,
+  },
+  emptyChatText: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    lineHeight: 22,
   },
   chatComposer: {
     flexDirection: "row",

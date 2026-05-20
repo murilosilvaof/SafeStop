@@ -8,7 +8,7 @@ import {
 import { globalStyles as styles } from "../styles/globalStyles";
 import { StatusPill } from "../components/StatusPill";
 import { AlertFeedItem } from "../components/AlertFeedItem";
-import { riskMeta } from "../data/mockData";
+import { riskMeta } from "../data/stops";
 
 // Dados extras por parada — idealmente viria do mockData ou de uma API
 const stopExtras = {

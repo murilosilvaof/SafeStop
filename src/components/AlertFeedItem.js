@@ -2,7 +2,7 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { colors, fonts } from "../constants/theme";
-import { riskMeta, statusMeta } from "../data/mockData";
+import { riskMeta, statusMeta } from "../data/stops";
 import { StatusPill } from "./StatusPill";
 
 export function AlertFeedItem({ alert, onConfirm }) {

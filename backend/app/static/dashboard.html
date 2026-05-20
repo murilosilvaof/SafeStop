@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SafeStop Central</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f7fb;
+        --card: #ffffff;
+        --line: #d7e2ef;
+        --text: #11233d;
+        --muted: #687b95;
+        --brand: #175bd8;
+        --danger: #d54848;
+        --success: #1f8b5d;
+      }
+
+      * {
+        box-sizing: border-box;
+        font-family: "Segoe UI", sans-serif;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      header {
+        padding: 20px 28px;
+        background: var(--card);
+        border-bottom: 1px solid var(--line);
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 20px;
+        padding: 20px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 18px;
+      }
+
+      h1, h2, h3, p {
+        margin: 0;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      .message,
+      .alert {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px;
+      }
+
+      .alert {
+        border-left: 5px solid var(--danger);
+      }
+
+      .message small,
+      .alert small {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+      }
+
+      .composer {
+        display: grid;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      input,
+      textarea,
+      button {
+        width: 100%;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        padding: 12px 14px;
+        font-size: 14px;
+      }
+
+      textarea {
+        min-height: 110px;
+        resize: vertical;
+      }
+
+      button {
+        background: var(--brand);
+        color: white;
+        border: none;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: #edf5ff;
+        border-radius: 999px;
+        color: var(--brand);
+        font-weight: 700;
+      }
+
+      @media (max-width: 920px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="stack">
+        <h1>Central de Seguranca SafeStop</h1>
+        <p class="muted">Painel ao vivo para receber chats, alertas do app e eventos do MQTT.</p>
+        <div class="pill" id="connectionState">Conectando ao Socket.IO...</div>
+      </div>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="stack">
+          <h2>Mensagens do app</h2>
+          <p class="muted">Selecione o usuario pelo ID e responda pela central.</p>
+          <div id="messages" class="stack"></div>
+          <div class="composer">
+            <input id="userId" placeholder="ID do usuario (ex: 20241234567)" />
+            <textarea id="messageBody" placeholder="Responder para o estudante..."></textarea>
+            <button id="sendReply">Enviar resposta da central</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="stack">
+        <div class="card">
+          <h2>Alertas e hardware</h2>
+          <p class="muted">Eventos criticos recebidos do app ou do ESP32.</p>
+        </div>
+        <div class="card">
+          <div id="alerts" class="stack"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const connectionState = document.getElementById("connectionState");
+      const messagesList = document.getElementById("messages");
+      const alertsList = document.getElementById("alerts");
+      const userIdInput = document.getElementById("userId");
+      const messageBodyInput = document.getElementById("messageBody");
+      const sendReplyButton = document.getElementById("sendReply");
+
+      const socket = io({
+        auth: {
+          role: "dashboard",
+        },
+      });
+
+      function prependCard(container, className, html) {
+        const node = document.createElement("div");
+        node.className = className;
+        node.innerHTML = html;
+        container.prepend(node);
+      }
+
+      socket.on("connect", () => {
+        connectionState.textContent = "Conectado a central";
+        socket.emit("dashboard:join", {
+          station: "central-ufrn",
+        });
+      });
+
+      socket.on("disconnect", () => {
+        connectionState.textContent = "Conexao perdida";
+      });
+
+      socket.on("dashboard:bootstrap", (payload) => {
+        (payload.alerts || []).forEach((alert) => {
+          prependCard(
+            alertsList,
+            "alert",
+            `<strong>${alert.stopName}</strong><p>${alert.message}</p><small>${alert.createdAt}</small>`
+          );
+        });
+
+        if (payload.hardwareAlert) {
+          prependCard(
+            alertsList,
+            "alert",
+            `<strong>Totem ${payload.hardwareAlert.stopName || payload.hardwareAlert.idTotem}</strong><p>Lat ${payload.hardwareAlert.latitude} | Long ${payload.hardwareAlert.longitude}</p><small>${payload.hardwareAlert.createdAt}</small>`
+          );
+        }
+      });
+
+      socket.on("chat:message", (message) => {
+        prependCard(
+          messagesList,
+          "message",
+          `<strong>${message.sender}</strong><p>${message.content}</p><small>${message.userId || ""} | ${message.createdAt}</small>`
+        );
+      });
+
+      socket.on("alert:created", (alert) => {
+        prependCard(
+          alertsList,
+          "alert",
+          `<strong>${alert.stopName}</strong><p>${alert.message}</p><small>${alert.author} | ${alert.createdAt}</small>`
+        );
+      });
+
+      socket.on("hardware:danger", (event) => {
+        prependCard(
+          alertsList,
+          "alert",
+          `<strong>${event.stopName || event.idTotem}</strong><p>Evento MQTT recebido do hardware</p><small>${event.createdAt}</small>`
+        );
+      });
+
+      sendReplyButton.addEventListener("click", () => {
+        const userId = userIdInput.value.trim();
+        const content = messageBodyInput.value.trim();
+
+        if (!userId || !content) {
+          return;
+        }
+
+        socket.emit("dashboard:send-message", {
+          userId,
+          content,
+        });
+
+        messageBodyInput.value = "";
+      });
+    </script>
+  </body>
+</html>

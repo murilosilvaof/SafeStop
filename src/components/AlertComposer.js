@@ -13,7 +13,7 @@ import {
 } from "react-native";
 
 import { colors, fonts } from "../constants/theme";
-import { riskMeta } from "../data/mockData";
+import { riskMeta } from "../data/stops";
 import { StatusPill } from "./StatusPill";
 
 const severityOptions = ["monitorando", "alerta", "emergencia"];
@@ -79,7 +79,7 @@ if (!selectedStop) return null;
               <View style={styles.focusCard}>
                 <View style={styles.focusHeader}>
                   <View style={styles.focusIcon}>
-                    <Text style={styles.focusIconText}>ECT</Text>
+                    <Text style={styles.focusIconText}>{selectedStop.shortCode ?? "STOP"}</Text>
                   </View>
                   <View style={styles.focusTextBlock}>
                     <Text style={styles.optionTitle}>{selectedStop.name}</Text>

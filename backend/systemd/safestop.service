@@ -1,0 +1,14 @@
+[Unit]
+Description=SafeStop Backend
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory=/opt/safestop/backend
+EnvironmentFile=/opt/safestop/backend/.env
+ExecStart=/opt/safestop/backend/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

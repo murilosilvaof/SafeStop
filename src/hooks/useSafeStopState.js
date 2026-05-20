@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { io } from "socket.io-client";
 
+import { SOCKET_URL } from "../config/runtime";
+import { stops as stopSeed } from "../data/stops";
 import {
-  initialAlerts,
-  initialChatMessages,
-  initialNotices,
-  stops as stopSeed,
-} from "../data/mockData";
+  clearStoredProfile,
+  loadStoredProfile,
+  persistProfile,
+} from "../storage/profileStorage";
 
-const formatter = new Intl.DateTimeFormat("pt-BR", {
+const alertFormatter = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
   month: "2-digit",
   hour: "2-digit",
@@ -19,128 +21,360 @@ const chatFormatter = new Intl.DateTimeFormat("pt-BR", {
   minute: "2-digit",
 });
 
-function formatAlertTimestamp(date) {
-  return formatter.format(date).replace(",", " |");
+function formatAlertTimestamp(dateInput) {
+  const date = new Date(dateInput);
+  return alertFormatter.format(date).replace(",", " |");
 }
 
-function formatChatTimestamp(date) {
-  return chatFormatter.format(date);
+function formatChatTimestamp(dateInput) {
+  return chatFormatter.format(new Date(dateInput));
 }
 
 function createId(prefix) {
   return `${prefix}-${Date.now()}-${Math.round(Math.random() * 1000)}`;
 }
 
-export function useSafeStopState() {
-  const [stops, setStops] = useState(stopSeed);
-  const [alerts, setAlerts] = useState(initialAlerts);
-  const [chatMessages, setChatMessages] = useState(initialChatMessages);
-  const [notices, setNotices] = useState(initialNotices);
-  const [selectedStopId, setSelectedStopId] = useState(stopSeed[0].id);
-  const [lastSentAlertId, setLastSentAlertId] = useState(null);
+function normalizeProfile(profile) {
+  if (!profile) {
+    return null;
+  }
 
-  const selectedStop = stops.find((stop) => stop.id === selectedStopId) ?? stops[0];
-  const lastSentAlert = alerts.find((alert) => alert.id === lastSentAlertId) ?? null;
+  return {
+    fullName: profile.fullName?.trim() ?? "",
+    ufrnId: profile.ufrnId?.trim() ?? "",
+    emergencyContact: profile.emergencyContact?.trim() ?? "",
+  };
+}
 
-  const submitAlert = ({ anonymous, message, riskLevel, stopId }) => {
-    const targetStop = stops.find((stop) => stop.id === stopId) ?? stops[0];
-    const createdAt = new Date();
+function normalizeChatMessage(message) {
+  const sender = message.sender === "seguranca" ? "seguranca" : "usuario";
 
-    const newAlert = {
-      id: createId("alert"),
-      stopId: targetStop.id,
-      stopName: targetStop.name,
-      author: anonymous ? "Usuario anonimo" : "Voce",
-      anonymous,
-      message,
-      createdAt: formatAlertTimestamp(createdAt),
+  return {
+    id: message.id ?? createId("chat"),
+    roomId: message.roomId ?? null,
+    sender,
+    content: message.content ?? "",
+    createdAt: message.createdAt
+      ? formatChatTimestamp(message.createdAt)
+      : formatChatTimestamp(new Date().toISOString()),
+  };
+}
+
+function normalizeAlert(alert) {
+  return {
+    id: alert.id ?? createId("alert"),
+    stopId: alert.stopId ?? "ect",
+    stopName: alert.stopName ?? "Parada monitorada",
+    author: alert.author ?? "Central SafeStop",
+    anonymous: Boolean(alert.anonymous),
+    message: alert.message ?? "",
+    createdAt: alert.createdAt
+      ? formatAlertTimestamp(alert.createdAt)
+      : formatAlertTimestamp(new Date().toISOString()),
+    riskLevel: alert.riskLevel ?? "alerta",
+    status: alert.status ?? "ativo",
+    confirmations: Number(alert.confirmations ?? 0),
+  };
+}
+
+function normalizeNotice(notice) {
+  return {
+    id: notice.id ?? createId("notice"),
+    title: notice.title ?? "Atualizacao",
+    body: notice.body ?? "",
+    createdAt: notice.createdAt
+      ? formatChatTimestamp(notice.createdAt)
+      : formatChatTimestamp(new Date().toISOString()),
+    variant: notice.variant ?? "info",
+  };
+}
+
+function normalizeHardwareAlert(event) {
+  return {
+    id: event.id ?? createId("hardware"),
+    idTotem: event.id_totem ?? event.idTotem ?? "totem-desconhecido",
+    stopId: event.stop_id ?? event.stopId ?? null,
+    stopName: event.stop_name ?? event.stopName ?? null,
+    latitude: Number(event.latitude ?? 0).toFixed(5),
+    longitude: Number(event.longitude ?? 0).toFixed(5),
+    createdAt: event.createdAt
+      ? formatAlertTimestamp(event.createdAt)
+      : formatAlertTimestamp(new Date().toISOString()),
+  };
+}
+
+function upsertById(items, nextItem) {
+  const currentIndex = items.findIndex((item) => item.id === nextItem.id);
+
+  if (currentIndex === -1) {
+    return [nextItem, ...items];
+  }
+
+  const nextItems = [...items];
+  nextItems[currentIndex] = {
+    ...nextItems[currentIndex],
+    ...nextItem,
+  };
+
+  return nextItems;
+}
+
+function mergeStopStatuses(baseStops, alerts, hardwareAlert) {
+  return baseStops.map((stop) => {
+    const activeAlerts = alerts.filter(
+      (alert) => alert.stopId === stop.id && alert.status !== "resolvido"
+    );
+
+    const hardwareRisk =
+      hardwareAlert?.stopId === stop.id || hardwareAlert?.idTotem === stop.shortCode?.toLowerCase();
+
+    let riskLevel = "monitorando";
+
+    if (activeAlerts.some((alert) => alert.riskLevel === "emergencia") || hardwareRisk) {
+      riskLevel = "emergencia";
+    } else if (activeAlerts.length > 0) {
+      riskLevel = "alerta";
+    }
+
+    return {
+      ...stop,
+      activeUsers: activeAlerts.length,
       riskLevel,
-      status: "ativo",
-      confirmations: 1,
+    };
+  });
+}
+
+export function useSafeStopState() {
+  const [isReady, setIsReady] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState("disconnected");
+  const [selectedStopId, setSelectedStopId] = useState(stopSeed[0].id);
+  const [alerts, setAlerts] = useState([]);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [notices, setNotices] = useState([]);
+  const [lastHardwareAlert, setLastHardwareAlert] = useState(null);
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function hydrateProfile() {
+      const storedProfile = await loadStoredProfile();
+
+      if (!mounted) {
+        return;
+      }
+
+      setProfile(normalizeProfile(storedProfile));
+      setIsReady(true);
+    }
+
+    hydrateProfile();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isReady) {
+      return undefined;
+    }
+
+    if (!profile?.ufrnId) {
+      setConnectionStatus("disconnected");
+      setAlerts([]);
+      setChatMessages([]);
+      setNotices([]);
+      setLastHardwareAlert(null);
+      return undefined;
+    }
+
+    const socket = io(SOCKET_URL, {
+      autoConnect: true,
+      transports: ["websocket"],
+      auth: {
+        role: "mobile",
+      },
+    });
+
+    socketRef.current = socket;
+    setConnectionStatus("connecting");
+
+    socket.on("connect", () => {
+      setConnectionStatus("connected");
+      socket.emit("client:register", {
+        profile,
+        selectedStopId,
+      });
+    });
+
+    socket.on("disconnect", () => {
+      setConnectionStatus("disconnected");
+    });
+
+    socket.on("connect_error", () => {
+      setConnectionStatus("error");
+      setNotices((current) =>
+        upsertById(
+          current,
+          normalizeNotice({
+            id: "offline-warning",
+            title: "Central indisponivel",
+            body: "Nao foi possivel conectar ao backend. Verifique a URL do servidor e o deploy.",
+            variant: "warning",
+          })
+        )
+      );
+    });
+
+    socket.on("bootstrap", (payload) => {
+      const nextAlerts = (payload.alerts ?? []).map(normalizeAlert);
+      const nextHardwareAlerts = payload.hardwareAlert ? normalizeHardwareAlert(payload.hardwareAlert) : null;
+
+      setAlerts(nextAlerts);
+      setChatMessages((payload.chatMessages ?? []).map(normalizeChatMessage));
+      setNotices((payload.notices ?? []).map(normalizeNotice));
+      setLastHardwareAlert(nextHardwareAlerts);
+    });
+
+    socket.on("chat:message", (payload) => {
+      setChatMessages((current) => [...current, normalizeChatMessage(payload)]);
+    });
+
+    socket.on("alert:created", (payload) => {
+      setAlerts((current) => upsertById(current, normalizeAlert(payload)));
+    });
+
+    socket.on("alert:updated", (payload) => {
+      setAlerts((current) => upsertById(current, normalizeAlert(payload)));
+    });
+
+    socket.on("notice:new", (payload) => {
+      setNotices((current) => upsertById(current, normalizeNotice(payload)));
+    });
+
+    socket.on("hardware:danger", (payload) => {
+      const nextHardwareAlert = normalizeHardwareAlert(payload);
+      setLastHardwareAlert(nextHardwareAlert);
+      setNotices((current) =>
+        upsertById(
+          current,
+          normalizeNotice({
+            title: "Totem acionado",
+            body: `Sinal de emergencia recebido para ${nextHardwareAlert.stopName ?? nextHardwareAlert.idTotem}.`,
+            variant: "warning",
+          })
+        )
+      );
+    });
+
+    return () => {
+      socket.removeAllListeners();
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [isReady, profile]);
+
+  useEffect(() => {
+    if (!socketRef.current?.connected || !selectedStopId) {
+      return;
+    }
+
+    socketRef.current.emit("presence:update", {
+      selectedStopId,
+    });
+  }, [selectedStopId]);
+
+  const stops = mergeStopStatuses(stopSeed, alerts, lastHardwareAlert);
+  const selectedStop = stops.find((stop) => stop.id === selectedStopId) ?? stops[0];
+  const hasProfile = Boolean(profile?.ufrnId);
+
+  async function saveProfile(nextProfile) {
+    const normalizedProfile = normalizeProfile(nextProfile);
+    await persistProfile(normalizedProfile);
+    setProfile(normalizedProfile);
+  }
+
+  async function updateEmergencyContact(nextEmergencyContact) {
+    if (!profile) {
+      return;
+    }
+
+    const nextProfile = {
+      ...profile,
+      emergencyContact: nextEmergencyContact.trim(),
     };
 
-    setAlerts((current) => [newAlert, ...current]);
-    setLastSentAlertId(newAlert.id);
+    await persistProfile(nextProfile);
+    setProfile(nextProfile);
+  }
 
-    setStops((current) =>
-      current.map((stop) =>
-        stop.id === targetStop.id
-          ? {
-              ...stop,
-              riskLevel,
-              activeUsers: stop.activeUsers + 1,
-            }
-          : stop
-      )
-    );
+  async function clearProfile() {
+    await clearStoredProfile();
+    setProfile(null);
+  }
 
-    setChatMessages((current) => [
-      ...current,
-      {
-        id: createId("chat"),
-        sender: "seguranca",
-        content: `Alerta recebido para ${targetStop.name}. Equipe patrimonial acionada e usuarios proximos avisados.`,
-        createdAt: formatChatTimestamp(createdAt),
-      },
-    ]);
+  function sendChatMessage(content) {
+    const message = content.trim();
 
-    setNotices((current) => [
-      {
-        id: createId("notice"),
-        title: `Novo alerta na ${targetStop.name}`,
-        body: message,
-        createdAt: formatChatTimestamp(createdAt),
-        variant: riskLevel === "emergencia" ? "warning" : "info",
-      },
-      ...current,
-    ]);
-  };
+    if (!message || !socketRef.current?.connected) {
+      return false;
+    }
 
-  const confirmAlert = (alertId) => {
-    setAlerts((current) =>
-      current.map((alert) =>
-        alert.id === alertId
-          ? {
-              ...alert,
-              confirmations: alert.confirmations + 1,
-            }
-          : alert
-      )
-    );
-  };
+    socketRef.current.emit("chat:send", {
+      content: message,
+      stopId: selectedStopId,
+    });
 
-  const sendChatMessage = (content) => {
-    const createdAt = new Date();
-    const humanTime = formatChatTimestamp(createdAt);
+    return true;
+  }
 
-    setChatMessages((current) => [
-      ...current,
-      {
-        id: createId("chat"),
-        sender: "usuario",
-        content,
-        createdAt: humanTime,
-      },
-      {
-        id: createId("chat"),
-        sender: "seguranca",
-        content: "Mensagem recebida. Continue no abrigo iluminado enquanto a ronda se aproxima.",
-        createdAt: humanTime,
-      },
-    ]);
-  };
+  function submitAlert({ anonymous, message, riskLevel, stopId }) {
+    if (!socketRef.current?.connected) {
+      return false;
+    }
+
+    socketRef.current.emit("alert:create", {
+      anonymous,
+      message: message.trim(),
+      riskLevel,
+      stopId,
+    });
+
+    return true;
+  }
+
+  function confirmAlert(alertId) {
+    if (!socketRef.current?.connected) {
+      return false;
+    }
+
+    socketRef.current.emit("alert:confirm", {
+      alertId,
+    });
+
+    return true;
+  }
 
   return {
     alerts,
     chatMessages,
+    clearProfile,
     confirmAlert,
-    lastSentAlert,
+    connectionStatus,
+    hasProfile,
+    isReady,
+    lastHardwareAlert,
     notices,
+    profile,
+    saveProfile,
     selectedStop,
     selectedStopId,
     sendChatMessage,
     setSelectedStopId,
     stops,
     submitAlert,
+    updateEmergencyContact,
   };
 }

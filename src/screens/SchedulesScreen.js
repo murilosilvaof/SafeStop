@@ -10,7 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { StatusPill } from "../components/StatusPill";
 import { colors, fonts } from "../constants/theme";
-import { riskMeta } from "../data/mockData";
+import { riskMeta } from "../data/stops";
 
 const periodLabels = {
   manha: "Manha",
