@@ -38,8 +38,9 @@ export function ChatScreen({ state }) {
         onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
       >
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>CENTRAL DE APOIO</Text>
-          <Text style={styles.title}>Segurança</Text>
+          <Text style={styles.eyebrow}>COMUNIDADE SAFE STOP</Text>
+          <Text style={styles.title}>Chat da Comunidade</Text>
+          <Text style={{color: colors.textMuted, marginTop: 8, fontSize: 14, lineHeight: 20}}>Conecte-se com outros usuários, compartilhe experiências e trabalhe juntos pela segurança das paradas.</Text>
         </View>
 
         {/* Notificações Preventivas da UFRN */}
@@ -55,7 +56,7 @@ export function ChatScreen({ state }) {
 
         {/* Histórico de Conversa */}
         <View style={{ gap: 16, marginTop: 10 }}>
-          <Text style={styles.eyebrow}>CONVERSA COM PATRIMONIAL</Text>
+          <Text style={styles.eyebrow}>CONVERSAS EM TEMPO REAL</Text>
           {chatMessages.map((msg) => (
             <ChatMessageBubble key={msg.id} message={msg} />
           ))}
@@ -75,7 +76,7 @@ export function ChatScreen({ state }) {
       >
         <TextInput
           style={styles.chatInput}
-          placeholder="Descreva a situação para a central..."
+          placeholder="Compartilhe sua experiência e ajude a comunidade..."
           placeholderTextColor={colors.textMuted}
           value={chatDraft}
           onChangeText={setChatDraft}

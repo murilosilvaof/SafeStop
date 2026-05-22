@@ -40,8 +40,8 @@ export function OperationalMapCard({ highlightedStopId, lastHardwareAlert, stops
     <View style={styles.card}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.eyebrow}>Mapa operacional</Text>
-          <Text style={styles.title}>Campus monitorado em tempo real</Text>
+          <Text style={styles.eyebrow}>Parada de Testes</Text>
+          <Text style={styles.title}>ECT - Totem em operação piloto</Text>
         </View>
         <View style={styles.legend}>
           <View style={styles.legendItem}>

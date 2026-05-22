@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -23,6 +24,7 @@ export function AlertComposer({ defaultStopId, onClose, onSubmit, stops, visible
   const [riskLevel, setRiskLevel] = useState("alerta");
   const [message, setMessage] = useState("");
   const [anonymous, setAnonymous] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const selectedStop = (stops && stops.find((stop) => stop.id === stopId)) ?? (stops ? stops[0] : null);
   const alertLocation = selectedStop
     ? `${selectedStop.name} · ${selectedStop.zone} · ${selectedStop.routeName}`
@@ -42,10 +44,12 @@ if (!selectedStop) return null;
   }, [defaultStopId, visible]);
 
   const handleSubmit = () => {
-    if (!message.trim()) {
+    if (!message.trim() || isSubmitting) {
       return;
     }
 
+    setIsSubmitting(true);
+    
     onSubmit({
       anonymous,
       message: `${message.trim()}\n\nLocalização: ${alertLocation}`,
@@ -53,6 +57,14 @@ if (!selectedStop) return null;
       stopId,
       location: alertLocation,
     });
+    
+    // Reset form after submission
+    setTimeout(() => {
+      setMessage("");
+      setRiskLevel("alerta");
+      setAnonymous(false);
+      setIsSubmitting(false);
+    }, 500);
   };
 
   return (
@@ -170,15 +182,20 @@ if (!selectedStop) return null;
             </View>
 
             <View style={styles.footer}>
-              <Pressable onPress={onClose} style={styles.secondaryButton}>
+              <Pressable onPress={onClose} style={styles.secondaryButton} disabled={isSubmitting}>
                 <Text style={styles.secondaryButtonText}>Cancelar</Text>
               </Pressable>
 
               <Pressable
                 onPress={handleSubmit}
-                style={[styles.primaryButton, !message.trim() && styles.primaryButtonDisabled]}
+                disabled={!message.trim() || isSubmitting}
+                style={[styles.primaryButton, (!message.trim() || isSubmitting) && styles.primaryButtonDisabled]}
               >
-                <Text style={styles.primaryButtonText}>Registrar ocorrência</Text>
+                {isSubmitting ? (
+                  <ActivityIndicator color={colors.surfaceStrong} size="small" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>Registrar ocorrência</Text>
+                )}
               </Pressable>
             </View>
           </ScrollView>

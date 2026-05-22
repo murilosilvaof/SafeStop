@@ -105,12 +105,17 @@ export function HomeScreen({ navigation, state }) {
     if (!wasSent) {
       Alert.alert(
         "Servidor indisponivel",
-        "Nao foi possivel registrar o alerta agora. Verifique o backend e tente novamente."
+        "Nao foi possivel registrar o alerta agora. Verifique se o backend está conectado.",
+        [{text: "OK"}]
       );
       return;
     }
 
-    setComposerVisible(false);
+    Alert.alert(
+      "Alerta registrado!",
+      "Sua ocorrência foi enviada para a central e para a comunidade. Obrigado!",
+      [{text: "OK", onPress: () => setComposerVisible(false)}]
+    );
   };
 
   const openSchedules = () => {
@@ -190,7 +195,7 @@ export function HomeScreen({ navigation, state }) {
         <OperationalMapCard
           highlightedStopId={lastHardwareAlert?.stopId}
           lastHardwareAlert={lastHardwareAlert}
-          stops={stops}
+          stops={stops.filter(s => s.id === 'ect')}
         />
 
         <ImageBackground imageStyle={styles.stopImage} source={ectHeroImage} style={styles.stopCard}>

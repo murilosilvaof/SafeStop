@@ -22,7 +22,7 @@ export function AlertsScreen({ state }) {
 
       <SectionCard 
         title="Ocorrências na Região"
-        description="Confirme alertas próximos para ajudar a validar a segurança das paradas."
+        description="Confirme alertas próximos para ajudar a validar a segurança. Discuta com a comunidade no chat!"
       >
         <View style={{ gap: 16 }}>
           {activeAlerts.length > 0 ? (
