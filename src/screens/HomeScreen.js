@@ -59,6 +59,8 @@ export function HomeScreen({ navigation, state }) {
     alerts,
     chatMessages,
     connectionStatus,
+    clearHardwareAlert,
+    hardwareState,
     lastHardwareAlert,
     notices,
     profile,
@@ -68,6 +70,7 @@ export function HomeScreen({ navigation, state }) {
     setSelectedStopId,
     stops,
     submitAlert,
+    triggerHardwareDanger,
   } = state;
   const [chatDraft, setChatDraft] = useState("");
   const [isComposerVisible, setComposerVisible] = useState(false);
@@ -80,6 +83,7 @@ export function HomeScreen({ navigation, state }) {
   const latestNotice = notices[0] ?? null;
   const previewMessages = useMemo(() => chatMessages.slice(-4), [chatMessages]);
   const firstName = profile?.fullName?.split(" ")[0] ?? "Usuario";
+  const isHardwareActive = Boolean(hardwareState?.active || lastHardwareAlert);
 
   if (!stop) {
     return null;
@@ -116,6 +120,38 @@ export function HomeScreen({ navigation, state }) {
       "Sua ocorrência foi enviada para a central e para a comunidade. Obrigado!",
       [{text: "OK", onPress: () => setComposerVisible(false)}]
     );
+  };
+
+  const hardwarePayload = {
+    id_totem: stop.shortCode?.toLowerCase() ? `totem-${stop.shortCode.toLowerCase()}` : "totem-ect",
+    stop_id: stop.id,
+    stop_name: stop.name,
+    latitude: stop.latitude,
+    longitude: stop.longitude,
+  };
+
+  const handleQuickAlert = async () => {
+    if (isHardwareActive) {
+      const wasCleared = await clearHardwareAlert();
+
+      if (!wasCleared) {
+        Alert.alert(
+          "Sem conexao com a central",
+          "Nao foi possivel desarmar o alerta agora. Verifique a conexao com o backend."
+        );
+      }
+
+      return;
+    }
+
+    const wasTriggered = await triggerHardwareDanger(hardwarePayload);
+
+    if (!wasTriggered) {
+      Alert.alert(
+        "Servidor indisponivel",
+        "Nao foi possivel disparar o alerta agora. Verifique se o backend esta conectado."
+      );
+    }
   };
 
   const openSchedules = () => {
@@ -180,16 +216,41 @@ export function HomeScreen({ navigation, state }) {
         </View>
 
         <View style={styles.alertCard}>
-          <Pressable onPress={() => setComposerVisible(true)} style={styles.alertButton}>
-            <Ionicons color="#FFFFFF" name="warning" size={48} />
-            <Text style={styles.alertButtonText}>ALERTA</Text>
+          <Pressable
+            onPress={handleQuickAlert}
+            style={[
+              styles.alertButton,
+              isHardwareActive ? styles.alertButtonActive : styles.alertButtonIdle,
+            ]}
+          >
+            <Ionicons
+              color={isHardwareActive ? colors.danger : "#FFFFFF"}
+              name={isHardwareActive ? "checkmark" : "warning"}
+              size={48}
+            />
+            <Text
+              style={[
+                styles.alertButtonText,
+                isHardwareActive && styles.alertButtonTextActive,
+              ]}
+            >
+              {isHardwareActive ? "DESARMAR" : "ALERTA"}
+            </Text>
           </Pressable>
 
-          <Text style={styles.alertTitle}>Acionar ajuda imediata</Text>
+          <Pressable onPress={() => setComposerVisible(true)} hitSlop={10}>
+            <Text style={styles.alertTitle}>
+              {isHardwareActive ? "Alerta ativo no sistema" : "Acionar ajuda imediata"}
+            </Text>
+          </Pressable>
           <Text style={styles.alertDescription}>
-            O alerta vai direto para a central, para o painel de seguranca e para os usuarios
-            conectados.
+            {isHardwareActive
+              ? "Toque em desarmar para limpar o estado global depois do teste."
+              : "O alerta vai direto para a central, para o painel de seguranca e para os usuarios conectados."}
           </Text>
+          <Pressable onPress={() => setComposerVisible(true)} style={styles.inlineComposerButton}>
+            <Text style={styles.inlineComposerButtonText}>Abrir formulario detalhado</Text>
+          </Pressable>
         </View>
 
         <OperationalMapCard
@@ -450,15 +511,21 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 999,
-    backgroundColor: colors.danger,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    shadowColor: colors.danger,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.28,
     shadowRadius: 20,
     elevation: 12,
+  },
+  alertButtonIdle: {
+    backgroundColor: colors.danger,
+    shadowColor: colors.danger,
+  },
+  alertButtonActive: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: colors.shadow,
   },
   alertButtonText: {
     color: "#FFFFFF",
@@ -466,6 +533,9 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "900",
     letterSpacing: 2,
+  },
+  alertButtonTextActive: {
+    color: colors.danger,
   },
   alertTitle: {
     color: colors.text,
@@ -480,6 +550,20 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 16,
     lineHeight: 25,
+  },
+  inlineComposerButton: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: colors.surfaceLifted,
+    borderWidth: 1,
+    borderColor: colors.outlineStrong,
+  },
+  inlineComposerButtonText: {
+    color: colors.text,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    fontWeight: "800",
   },
   stopCard: {
     marginHorizontal: 20,

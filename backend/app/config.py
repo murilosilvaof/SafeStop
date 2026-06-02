@@ -14,9 +14,24 @@ def _load_totem_map() -> dict[str, dict[str, str]]:
 
   if not raw_value:
     return {
-      "totem-ect": {"stop_id": "ect", "stop_name": "Parada da ECT"},
-      "totem-biblioteca": {"stop_id": "biblioteca", "stop_name": "Biblioteca Central"},
-      "totem-ru": {"stop_id": "ru", "stop_name": "Restaurante Universitario"},
+      "totem-ect": {
+        "stop_id": "ect",
+        "stop_name": "Parada da ECT",
+        "latitude": -5.83917,
+        "longitude": -35.2007,
+      },
+      "totem-biblioteca": {
+        "stop_id": "biblioteca",
+        "stop_name": "Biblioteca Central",
+        "latitude": -5.84252,
+        "longitude": -35.19861,
+      },
+      "totem-ru": {
+        "stop_id": "ru",
+        "stop_name": "Restaurante Universitario",
+        "latitude": -5.83848,
+        "longitude": -35.20643,
+      },
     }
 
   return json.loads(raw_value)
@@ -41,7 +56,7 @@ class Settings:
       self.allowed_origins = _split_csv(
         os.getenv(
           "SAFESTOP_ALLOWED_ORIGINS",
-          "https://safestop.ect.ufrn.br,http://localhost:8081,exp://127.0.0.1:8081",
+          "*,http://localhost:8083,http://127.0.0.1:8083,https://safestop.ect.ufrn.br,https://safe-stop-one.vercel.app,http://localhost:8081,http://127.0.0.1:8081,exp://127.0.0.1:8081,exp://localhost:8081",
         )
       )
 

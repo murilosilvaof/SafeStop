@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { Platform } from "react-native";
 import { io } from "socket.io-client";
 
-import { SOCKET_URL } from "../config/runtime";
+import { API_URL, SOCKET_URL } from "../config/runtime";
 import { stops as stopSeed } from "../data/stops";
 import {
   clearStoredProfile,
@@ -103,6 +104,17 @@ function normalizeHardwareAlert(event) {
   };
 }
 
+function createDemoHardwarePayload(selectedStop) {
+  return {
+    id_totem: selectedStop?.shortCode?.toLowerCase() ?? "ect",
+    stop_id: selectedStop?.id ?? "ect",
+    stop_name: selectedStop?.name ?? "Parada monitorada",
+    latitude: selectedStop?.latitude ?? -5.83917,
+    longitude: selectedStop?.longitude ?? -35.2007,
+    createdAt: new Date().toISOString(),
+  };
+}
+
 function upsertById(items, nextItem) {
   const currentIndex = items.findIndex((item) => item.id === nextItem.id);
 
@@ -153,6 +165,15 @@ export function useSafeStopState() {
   const [chatMessages, setChatMessages] = useState([]);
   const [notices, setNotices] = useState([]);
   const [lastHardwareAlert, setLastHardwareAlert] = useState(null);
+  const [hardwareState, setHardwareState] = useState({
+    active: false,
+    updatedAt: null,
+    idTotem: null,
+    stopId: null,
+    stopName: null,
+    latitude: null,
+    longitude: null,
+  });
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -231,11 +252,22 @@ export function useSafeStopState() {
     socket.on("bootstrap", (payload) => {
       const nextAlerts = (payload.alerts ?? []).map(normalizeAlert);
       const nextHardwareAlerts = payload.hardwareAlert ? normalizeHardwareAlert(payload.hardwareAlert) : null;
+      const nextHardwareState =
+        payload.hardwareState ?? {
+          active: Boolean(payload.hardwareAlert),
+          updatedAt: payload.hardwareAlert?.createdAt ?? null,
+          idTotem: payload.hardwareAlert?.idTotem ?? null,
+          stopId: payload.hardwareAlert?.stopId ?? null,
+          stopName: payload.hardwareAlert?.stopName ?? null,
+          latitude: payload.hardwareAlert?.latitude ?? null,
+          longitude: payload.hardwareAlert?.longitude ?? null,
+        };
 
       setAlerts(nextAlerts);
       setChatMessages((payload.chatMessages ?? []).map(normalizeChatMessage));
       setNotices((payload.notices ?? []).map(normalizeNotice));
-      setLastHardwareAlert(nextHardwareAlerts);
+      setHardwareState(nextHardwareState);
+      setLastHardwareAlert(nextHardwareState.active ? nextHardwareAlerts : null);
     });
 
     socket.on("chat:message", (payload) => {
@@ -255,18 +287,25 @@ export function useSafeStopState() {
     });
 
     socket.on("hardware:danger", (payload) => {
-      const nextHardwareAlert = normalizeHardwareAlert(payload);
-      setLastHardwareAlert(nextHardwareAlert);
-      setNotices((current) =>
-        upsertById(
-          current,
-          normalizeNotice({
-            title: "Totem acionado",
-            body: `Sinal de emergencia recebido para ${nextHardwareAlert.stopName ?? nextHardwareAlert.idTotem}.`,
-            variant: "warning",
-          })
-        )
-      );
+      setHardwareState({
+        active: true,
+        updatedAt: payload.createdAt ?? new Date().toISOString(),
+        idTotem: payload.idTotem ?? null,
+        stopId: payload.stopId ?? null,
+        stopName: payload.stopName ?? null,
+        latitude: payload.latitude ?? null,
+        longitude: payload.longitude ?? null,
+      });
+      handleHardwareDanger(payload);
+    });
+
+    socket.on("hardware:reset", (payload) => {
+      setHardwareState((current) => ({
+        ...current,
+        active: false,
+        updatedAt: payload?.updatedAt ?? new Date().toISOString(),
+      }));
+      setLastHardwareAlert(null);
     });
 
     return () => {
@@ -275,6 +314,53 @@ export function useSafeStopState() {
       socketRef.current = null;
     };
   }, [isReady, profile]);
+
+  useEffect(() => {
+    if (
+      Platform.OS !== "web" ||
+      typeof window === "undefined" ||
+      !isReady ||
+      !profile?.ufrnId
+    ) {
+      return undefined;
+    }
+
+    const baseStop = stopSeed.find((stop) => stop.id === selectedStopId) ?? stopSeed[0];
+    const browserDemoTrigger = (detail = {}) => {
+      handleHardwareDanger({
+        ...createDemoHardwarePayload(baseStop),
+        ...detail,
+      });
+    };
+
+    const handleKeyDown = (event) => {
+      const key = event.key?.toLowerCase();
+
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && key === "e") {
+        event.preventDefault();
+        browserDemoTrigger();
+      }
+    };
+
+    const handleBrowserDanger = (event) => {
+      browserDemoTrigger(event.detail ?? {});
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("hardware:danger", handleBrowserDanger);
+    window.addEventListener("safestop:hardware-danger", handleBrowserDanger);
+    window.__SAFE_STOP_TRIGGER_HARDWARE_DANGER__ = browserDemoTrigger;
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("hardware:danger", handleBrowserDanger);
+      window.removeEventListener("safestop:hardware-danger", handleBrowserDanger);
+
+      if (window.__SAFE_STOP_TRIGGER_HARDWARE_DANGER__ === browserDemoTrigger) {
+        delete window.__SAFE_STOP_TRIGGER_HARDWARE_DANGER__;
+      }
+    };
+  }, [isReady, profile?.ufrnId, selectedStopId]);
 
   useEffect(() => {
     if (!socketRef.current?.connected || !selectedStopId) {
@@ -289,6 +375,22 @@ export function useSafeStopState() {
   const stops = mergeStopStatuses(stopSeed, alerts, lastHardwareAlert);
   const selectedStop = stops.find((stop) => stop.id === selectedStopId) ?? stops[0];
   const hasProfile = Boolean(profile?.ufrnId);
+
+  function handleHardwareDanger(payload) {
+    const nextHardwareAlert = normalizeHardwareAlert(payload);
+
+    setLastHardwareAlert(nextHardwareAlert);
+    setNotices((current) =>
+      upsertById(
+        current,
+        normalizeNotice({
+          title: "Totem acionado",
+          body: `Sinal de emergencia recebido para ${nextHardwareAlert.stopName ?? nextHardwareAlert.idTotem}.`,
+          variant: "warning",
+        })
+      )
+    );
+  }
 
   async function saveProfile(nextProfile) {
     const normalizedProfile = normalizeProfile(nextProfile);
@@ -313,6 +415,62 @@ export function useSafeStopState() {
   async function clearProfile() {
     await clearStoredProfile();
     setProfile(null);
+  }
+
+  function clearLastHardwareAlert() {
+    setLastHardwareAlert(null);
+  }
+
+  async function triggerHardwareDanger(payload = {}) {
+    try {
+      const response = await fetch(`${API_URL}/api/hardware/serial-alert`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        return true;
+      }
+    } catch (error) {
+      console.warn("Could not trigger hardware danger:", error);
+    }
+
+    if (
+      Platform.OS === "web" &&
+      typeof window !== "undefined" &&
+      typeof window.__SAFE_STOP_TRIGGER_HARDWARE_DANGER__ === "function"
+    ) {
+      window.__SAFE_STOP_TRIGGER_HARDWARE_DANGER__(payload);
+      return true;
+    }
+
+    return false;
+  }
+
+  async function clearHardwareAlert() {
+    try {
+      const response = await fetch(`${API_URL}/api/hardware/reset`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      setLastHardwareAlert(null);
+      setHardwareState((current) => ({
+        ...current,
+        active: false,
+        updatedAt: new Date().toISOString(),
+      }));
+      return true;
+    } catch (error) {
+      console.warn("Could not reset hardware alert:", error);
+      return false;
+    }
   }
 
   function sendChatMessage(content) {
@@ -361,10 +519,13 @@ export function useSafeStopState() {
     alerts,
     chatMessages,
     clearProfile,
+    clearLastHardwareAlert,
+    clearHardwareAlert,
     confirmAlert,
     connectionStatus,
     hasProfile,
     isReady,
+    hardwareState,
     lastHardwareAlert,
     notices,
     profile,
@@ -375,6 +536,7 @@ export function useSafeStopState() {
     setSelectedStopId,
     stops,
     submitAlert,
+    triggerHardwareDanger,
     updateEmergencyContact,
   };
 }

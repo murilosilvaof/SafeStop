@@ -15,11 +15,17 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.ufrn.safestop"
+      "package": "com.ufrn.safestop",
+      "usesCleartextTraffic": true
     },
     "web": {
       "bundler": "metro"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "456707b7-5e52-4f6b-8488-9d5f1e330d41"
+      }
+    },
+    "owner": "murilosilvaof"
   }
 }
-

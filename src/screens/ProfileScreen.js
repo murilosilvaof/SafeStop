@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import { API_URL } from "../config/runtime";
 import { colors, fonts } from "../constants/theme";
 
 function SummaryCard({ accent, label, value }) {
@@ -165,7 +166,7 @@ export function ProfileScreen({ state }) {
         <Text style={styles.sectionEyebrow}>Conta</Text>
         <ProfileAction
           icon="server-outline"
-          label="Servidor: safestop.ect.ufrn.br"
+          label={`Servidor: ${API_URL.replace(/^https?:\/\//, "")}`}
           onPress={() => {}}
         />
         <ProfileAction

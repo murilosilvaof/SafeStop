@@ -6,6 +6,7 @@ from pathlib import Path
 import socketio
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from .catalog import STOP_CATALOG
@@ -21,6 +22,14 @@ service = SafeStopService(sio=sio, storage=storage, settings=settings)
 fastapi_app = FastAPI(title="SafeStop Backend", version="1.0.0")
 dashboard_path = Path(__file__).with_name("static").joinpath("dashboard.html")
 mqtt_bridge: MqttBridge | None = None
+
+fastapi_app.add_middleware(
+  CORSMiddleware,
+  allow_origins=settings.allowed_origins,
+  allow_credentials=True,
+  allow_methods=["*"],
+  allow_headers=["*"],
+)
 
 
 @fastapi_app.on_event("startup")
@@ -45,6 +54,40 @@ async def healthcheck() -> JSONResponse:
 @fastapi_app.get("/api/stops")
 async def list_stops() -> JSONResponse:
   return JSONResponse({"stops": STOP_CATALOG})
+
+
+@fastapi_app.get("/api/hardware/state")
+async def hardware_state() -> JSONResponse:
+  return JSONResponse(service.storage.get_hardware_state())
+
+
+@fastapi_app.post("/api/hardware/serial-alert")
+async def hardware_serial_alert(payload: dict | None = None) -> JSONResponse:
+  next_payload = payload or {}
+  next_payload.setdefault("id_totem", "totem-ect")
+  await service.handle_hardware_event(next_payload)
+  return JSONResponse({"ok": True, "active": True})
+
+
+@fastapi_app.post("/api/hardware/reset")
+async def hardware_reset() -> JSONResponse:
+  await service.clear_hardware_event()
+  return JSONResponse({"ok": True, "active": False})
+
+
+@fastapi_app.get("/api/hardware/commands")
+async def hardware_commands(totem_id: str | None = None) -> JSONResponse:
+  if not totem_id:
+    return JSONResponse({"commands": []})
+
+  cmds = service.storage.fetch_pending_commands(totem_id)
+  return JSONResponse({"commands": cmds})
+
+
+@fastapi_app.post("/api/hardware/commands/{cmd_id}/ack")
+async def hardware_command_ack(cmd_id: str) -> JSONResponse:
+  service.storage.mark_command_processed(cmd_id)
+  return JSONResponse({"ok": True})
 
 
 @fastapi_app.get("/dashboard", response_class=HTMLResponse)

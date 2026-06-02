@@ -1,0 +1,36 @@
+#include <Arduino.h>
+
+#define PINO_BOTOEIRA   27
+#define PINO_LED        2
+
+bool estadoAnteriorBotao = HIGH;
+unsigned long ultimoDebounce = 0;
+const unsigned long debounceDelay = 50;
+
+void setup() {
+  // Abre a comunicação via cabo USB na velocidade do seu monitor
+  Serial.begin(115200); 
+  pinMode(PINO_BOTOEIRA, INPUT_PULLUP);
+  pinMode(PINO_LED, OUTPUT);
+  digitalWrite(PINO_LED, LOW);
+}
+
+void loop() {
+  bool leitura = digitalRead(PINO_BOTOEIRA);
+
+  if (estadoAnteriorBotao == HIGH && leitura == LOW && (millis() - ultimoDebounce > debounceDelay)) {
+    digitalWrite(PINO_LED, HIGH); // Acende o LED da placa
+    
+    // Manda a palavra que o seu computador vai ler
+    Serial.println("ALERTA"); 
+    
+    ultimoDebounce = millis();
+  }
+
+  if (leitura == HIGH) {
+    digitalWrite(PINO_LED, LOW);
+  }
+
+  estadoAnteriorBotao = leitura;
+  delay(10);
+}

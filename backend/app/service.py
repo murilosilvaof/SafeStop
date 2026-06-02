@@ -69,6 +69,7 @@ class SafeStopService:
         }
       ],
       "hardwareAlert": self.storage.get_last_hardware_event(),
+      "hardwareState": self.storage.get_hardware_state(),
     }
 
     await self.sio.emit("bootstrap", bootstrap_payload, to=sid)
@@ -192,13 +193,14 @@ class SafeStopService:
 
   async def handle_hardware_event(self, payload: dict) -> None:
     totem_id = payload.get("id_totem", "totem-desconhecido")
-    latitude = payload.get("latitude")
-    longitude = payload.get("longitude")
+    mapped_stop = self.settings.totem_map.get(totem_id, {})
+    latitude = payload.get("latitude", mapped_stop.get("latitude"))
+    longitude = payload.get("longitude", mapped_stop.get("longitude"))
 
     if latitude is None or longitude is None:
-      return
+      latitude = -5.83917
+      longitude = -35.2007
 
-    mapped_stop = self.settings.totem_map.get(totem_id, {})
     event = {
       "id": uuid4().hex,
       "idTotem": totem_id,
@@ -209,6 +211,17 @@ class SafeStopService:
       "createdAt": utc_now_iso(),
     }
     self.storage.save_hardware_event(event)
+    self.storage.set_hardware_state(
+      {
+        "active": True,
+        "idTotem": event["idTotem"],
+        "stopId": event["stopId"],
+        "stopName": event["stopName"],
+        "latitude": event["latitude"],
+        "longitude": event["longitude"],
+        "updatedAt": event["createdAt"],
+      }
+    )
 
     await self.sio.emit("hardware:danger", event, room="mobiles")
     await self.sio.emit("hardware:danger", event, room="dashboard:security")
@@ -223,6 +236,50 @@ class SafeStopService:
       },
       room="mobiles",
     )
+
+  async def clear_hardware_event(self) -> None:
+    current = self.storage.get_hardware_state()
+
+    self.storage.set_hardware_state(
+      {
+        "active": False,
+        "idTotem": current.get("idTotem"),
+        "stopId": current.get("stopId"),
+        "stopName": current.get("stopName"),
+        "latitude": current.get("latitude"),
+        "longitude": current.get("longitude"),
+        "updatedAt": utc_now_iso(),
+      }
+    )
+
+    await self.sio.emit(
+      "hardware:reset",
+      {
+        "active": False,
+        "updatedAt": utc_now_iso(),
+      },
+      room="mobiles",
+    )
+    await self.sio.emit(
+      "hardware:reset",
+      {
+        "active": False,
+        "updatedAt": utc_now_iso(),
+      },
+      room="dashboard:security",
+    )
+    # Enqueue a hardware RESET command so bridges can turn off indicators
+    try:
+      cmd = {
+        "id": uuid4().hex,
+        "idTotem": current.get("idTotem") or "totem-ect",
+        "command": "RESET",
+        "createdAt": utc_now_iso(),
+      }
+      self.storage.enqueue_hardware_command(cmd)
+    except Exception:
+      # don't let a storage issue break the reset flow
+      pass
 
   async def disconnect(self, sid: str) -> None:
     self.sessions_by_sid.pop(sid, None)

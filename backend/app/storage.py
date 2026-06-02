@@ -53,6 +53,25 @@ class SafeStopStorage:
           longitude REAL NOT NULL,
           created_at TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS hardware_state (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          active INTEGER NOT NULL DEFAULT 0,
+          id_totem TEXT,
+          stop_id TEXT,
+          stop_name TEXT,
+          latitude REAL,
+          longitude REAL,
+          updated_at TEXT NOT NULL
+        );
+        
+        CREATE TABLE IF NOT EXISTS hardware_commands (
+          id TEXT PRIMARY KEY,
+          id_totem TEXT NOT NULL,
+          command TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          processed INTEGER NOT NULL DEFAULT 0
+        );
         """
       )
 
@@ -206,6 +225,115 @@ class SafeStopStorage:
       "latitude": row["latitude"],
       "longitude": row["longitude"],
       "createdAt": row["created_at"],
+    }
+
+  def set_hardware_state(self, payload: dict[str, Any]) -> None:
+    with self._connect() as connection:
+      connection.execute(
+        """
+        INSERT INTO hardware_state (
+          id, active, id_totem, stop_id, stop_name, latitude, longitude, updated_at
+        ) VALUES (
+          1, ?, ?, ?, ?, ?, ?, ?
+        )
+        ON CONFLICT(id) DO UPDATE SET
+          active = excluded.active,
+          id_totem = excluded.id_totem,
+          stop_id = excluded.stop_id,
+          stop_name = excluded.stop_name,
+          latitude = excluded.latitude,
+          longitude = excluded.longitude,
+          updated_at = excluded.updated_at
+        """,
+        (
+          1 if payload.get("active") else 0,
+          payload.get("idTotem"),
+          payload.get("stopId"),
+          payload.get("stopName"),
+          payload.get("latitude"),
+          payload.get("longitude"),
+          payload["updatedAt"],
+        ),
+      )
+
+  def enqueue_hardware_command(self, payload: dict[str, Any]) -> None:
+    with self._connect() as connection:
+      connection.execute(
+        """
+        INSERT INTO hardware_commands (
+          id, id_totem, command, created_at, processed
+        ) VALUES (?, ?, ?, ?, 0)
+        """,
+        (
+          payload["id"],
+          payload["idTotem"],
+          payload["command"],
+          payload["createdAt"],
+        ),
+      )
+
+  def fetch_pending_commands(self, id_totem: str) -> list[dict[str, Any]]:
+    with self._connect() as connection:
+      rows = connection.execute(
+        """
+        SELECT id, id_totem, command, created_at
+        FROM hardware_commands
+        WHERE id_totem = ? AND processed = 0
+        ORDER BY datetime(created_at) ASC
+        """,
+        (id_totem,),
+      ).fetchall()
+
+    return [
+      {
+        "id": row["id"],
+        "idTotem": row["id_totem"],
+        "command": row["command"],
+        "createdAt": row["created_at"],
+      }
+      for row in rows
+    ]
+
+  def mark_command_processed(self, cmd_id: str) -> None:
+    with self._connect() as connection:
+      connection.execute(
+        """
+        UPDATE hardware_commands
+        SET processed = 1
+        WHERE id = ?
+        """,
+        (cmd_id,)
+      )
+
+  def get_hardware_state(self) -> dict[str, Any]:
+    with self._connect() as connection:
+      row = connection.execute(
+        """
+        SELECT active, id_totem, stop_id, stop_name, latitude, longitude, updated_at
+        FROM hardware_state
+        WHERE id = 1
+        """
+      ).fetchone()
+
+    if row is None:
+      return {
+        "active": False,
+        "idTotem": None,
+        "stopId": None,
+        "stopName": None,
+        "latitude": None,
+        "longitude": None,
+        "updatedAt": None,
+      }
+
+    return {
+      "active": bool(row["active"]),
+      "idTotem": row["id_totem"],
+      "stopId": row["stop_id"],
+      "stopName": row["stop_name"],
+      "latitude": row["latitude"],
+      "longitude": row["longitude"],
+      "updatedAt": row["updated_at"],
     }
 
   def _alert_row_to_dict(self, row: sqlite3.Row) -> dict[str, Any]:
