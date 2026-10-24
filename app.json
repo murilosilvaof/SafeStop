@@ -1,10 +1,12 @@
 {
   "expo": {
-    "name": "SafeStop UFRN",
+    "name": "SafeStop",
     "slug": "safestop-ufrn",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/logo-sem-fundo.png",
     "userInterfaceStyle": "light",
+    "description": "Central SafeStop para monitoramento e alerta em tempo real.",
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -19,7 +21,15 @@
       "usesCleartextTraffic": true
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "name": "SafeStop",
+      "shortName": "SafeStop",
+      "description": "Central em tempo real da SafeStop.",
+      "display": "standalone",
+      "themeColor": "#081C24",
+      "backgroundColor": "#081C24",
+      "startUrl": "/",
+      "favicon": "./assets/logo-sem-fundo.png"
     },
     "extra": {
       "eas": {

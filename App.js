@@ -21,7 +21,7 @@ import { SchedulesScreen } from "./src/screens/SchedulesScreen";
 import { RegistrationScreen } from "./src/screens/RegistrationScreen";
 import { ContactsScreen } from "./src/screens/ContactsScreen";
 
-const logo = require("./assets/logo.jpeg");
+const logo = require("./assets/logo-sem-fundo.png");
 const Tab = createBottomTabNavigator();
 
 function EmergencyOverlay({ alertData, onAcknowledge }) {
@@ -94,7 +94,7 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer documentTitle={{ formatter: () => "SafeStop" }}>
       <SafeAreaView style={styles.safeArea}>
         <Image source={logo} style={styles.watermark} resizeMode="contain" pointerEvents="none" />
         <StatusBar
@@ -103,9 +103,11 @@ export default function App() {
         />
 
         <View style={styles.header}>
-          <Image source={logo} style={styles.logo} resizeMode="contain" />
+          <View style={styles.logoFrame}>
+            <Image accessibilityLabel="Logo SafeStop" source={logo} style={styles.logo} resizeMode="contain" />
+          </View>
           <View style={styles.brandCopy}>
-            <Text style={styles.brandTitle}>SafeStop UFRN</Text>
+            <Text style={styles.brandTitle}>SafeStop</Text>
             <Text style={styles.brandSubtitle}>
               {hardwareActive
                 ? "ALERTA DE PANICO ATIVO"
@@ -205,10 +207,17 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.outlineStrong,
     gap: 12,
   },
-  logo: {
-    width: 60,
-    height: 60,
+  logoFrame: {
+    width: 76,
+    height: 76,
     borderRadius: 14,
+    backgroundColor: "#081C24",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logo: {
+    width: 68,
+    height: 68,
   },
   brandCopy: {
     flex: 1,

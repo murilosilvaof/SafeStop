@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -53,7 +54,15 @@ export function RegistrationScreen({ onSubmit }) {
     >
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.heroCard}>
-          <Text style={styles.eyebrow}>SAFE STOP UFRN</Text>
+          <View style={styles.logoFrame}>
+            <Image
+              accessibilityLabel="Logo SafeStop"
+              source={require("../../assets/logo-sem-fundo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+          <Text style={styles.eyebrow}>SafeStop</Text>
           <Text style={styles.title}>Cadastro inicial do usuario</Text>
           <Text style={styles.subtitle}>
             Esse cadastro local identifica o estudante para a central e salva o contato de
@@ -147,7 +156,18 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 12,
     fontWeight: "700",
-    textTransform: "uppercase",
+  },
+  logoFrame: {
+    width: 112,
+    height: 112,
+    borderRadius: 20,
+    backgroundColor: "#081C24",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logo: {
+    width: 100,
+    height: 100,
   },
   title: {
     color: colors.text,
