@@ -4,7 +4,7 @@
     "slug": "safestop-ufrn",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/logo-sem-fundo.png",
+    "icon": "./assets/logo-colorida.png",
     "userInterfaceStyle": "light",
     "description": "Central SafeStop para monitoramento e alerta em tempo real.",
     "assetBundlePatterns": [
@@ -29,7 +29,7 @@
       "themeColor": "#081C24",
       "backgroundColor": "#081C24",
       "startUrl": "/",
-      "favicon": "./assets/logo-sem-fundo.png"
+      "favicon": "./assets/logo-colorida.png"
     },
     "extra": {
       "eas": {

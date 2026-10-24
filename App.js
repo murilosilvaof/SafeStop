@@ -21,7 +21,7 @@ import { SchedulesScreen } from "./src/screens/SchedulesScreen";
 import { RegistrationScreen } from "./src/screens/RegistrationScreen";
 import { ContactsScreen } from "./src/screens/ContactsScreen";
 
-const logo = require("./assets/logo-sem-fundo.png");
+const logo = require("./assets/logo-colorida.png");
 const Tab = createBottomTabNavigator();
 
 function EmergencyOverlay({ alertData, onAcknowledge }) {
@@ -208,16 +208,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   logoFrame: {
-    width: 76,
-    height: 76,
+    width: 96,
+    height: 96,
     borderRadius: 14,
-    backgroundColor: "#081C24",
+    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
   },
   logo: {
-    width: 68,
-    height: 68,
+    width: 96,
+    height: 96,
   },
   brandCopy: {
     flex: 1,

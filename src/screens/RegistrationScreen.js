@@ -57,7 +57,7 @@ export function RegistrationScreen({ onSubmit }) {
           <View style={styles.logoFrame}>
             <Image
               accessibilityLabel="Logo SafeStop"
-              source={require("../../assets/logo-sem-fundo.png")}
+              source={require("../../assets/logo-colorida.png")}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -158,16 +158,16 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   logoFrame: {
-    width: 112,
-    height: 112,
+    width: 144,
+    height: 144,
     borderRadius: 20,
-    backgroundColor: "#081C24",
+    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
   },
   logo: {
-    width: 100,
-    height: 100,
+    width: 144,
+    height: 144,
   },
   title: {
     color: colors.text,
