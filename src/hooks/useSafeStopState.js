@@ -236,17 +236,6 @@ export function useSafeStopState() {
 
     socket.on("connect_error", () => {
       setConnectionStatus("error");
-      setNotices((current) =>
-        upsertById(
-          current,
-          normalizeNotice({
-            id: "offline-warning",
-            title: "Central indisponivel",
-            body: "Nao foi possivel conectar ao backend. Verifique a URL do servidor e o deploy.",
-            variant: "warning",
-          })
-        )
-      );
     });
 
     socket.on("bootstrap", (payload) => {
